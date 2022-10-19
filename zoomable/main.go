@@ -20,6 +20,11 @@ import (
 	"gioui.org/widget/material"
 )
 
+type (
+	C = layout.Context
+	D = layout.Dimensions
+)
+
 // Zoomable: experiment at making a widget which content can be zoomed/panned
 // using the mouse wheel, while keeping the point under the cursor immobile
 // (i.e. using the mouse cursor as scale origin).
@@ -51,7 +56,7 @@ func (u *ui) Run(w *app.Window) error {
 		switch e := e.(type) {
 		case system.FrameEvent:
 			gtx := layout.NewContext(&ops, e)
-			z.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			z.Layout(gtx, func(gtx C) D {
 				rect := clip.Rect{
 					Min: image.Pt(100, 100),
 					Max: image.Pt(300, 300),
@@ -60,7 +65,7 @@ func (u *ui) Run(w *app.Window) error {
 				color := color.NRGBA{R: 200, A: 255}
 				paint.FillShape(gtx.Ops, color, rect)
 				d := image.Point{Y: 400}
-				return layout.Dimensions{Size: d}
+				return D{Size: d}
 			})
 			e.Frame(gtx.Ops)
 
@@ -84,7 +89,7 @@ type zoomable struct {
 	tr     f32.Affine2D
 }
 
-func (z *zoomable) Layout(gtx layout.Context, zoomed layout.Widget) layout.Dimensions {
+func (z *zoomable) Layout(gtx C, zoomed layout.Widget) D {
 	z.scroll.Add(gtx.Ops, image.Rect(0, -1, 0, 1))
 	nscroll := z.scroll.Scroll(gtx.Metric, gtx, gtx.Now, gesture.Vertical)
 	pointer.InputOp{Tag: z, Types: pointer.Move}.Add(gtx.Ops)
