@@ -56,6 +56,7 @@ func (u *ui) Run(w *app.Window) error {
 		switch e := e.(type) {
 		case system.FrameEvent:
 			gtx := layout.NewContext(&ops, e)
+
 			z.Layout(gtx, func(gtx C) D {
 				rect := clip.Rect{
 					Min: image.Pt(100, 100),
@@ -107,9 +108,9 @@ func (z *zoomable) Layout(gtx C, zoomed layout.Widget) D {
 	if nscroll != 0 {
 		var change float32
 		if nscroll > 0 {
-			change = 0.9
-		} else {
 			change = 1.1
+		} else {
+			change = 0.9
 		}
 
 		z.tr = z.tr.Scale(z.mouse, f32.Pt(change, change))
