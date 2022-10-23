@@ -91,35 +91,38 @@ type zoomable struct {
 }
 
 func (z *zoomable) Layout(gtx C, zoomed layout.Widget) D {
-	z.scroll.Add(gtx.Ops, image.Rect(0, -1, 0, 1))
-	nscroll := z.scroll.Scroll(gtx.Metric, gtx, gtx.Now, gesture.Vertical)
-	pointer.InputOp{Tag: z, Types: pointer.Move}.Add(gtx.Ops)
+	{
+		stack := clip.Rect{
+			Max: gtx.Constraints.Max,
+		}.Push(gtx.Ops)
 
-	for _, ev := range gtx.Events(z) {
-		switch ev := ev.(type) {
-		case pointer.Event:
-			switch ev.Type {
-			case pointer.Move:
-				z.mouse = ev.Position
+		z.scroll.Add(gtx.Ops, image.Rect(0, -1, 0, 1))
+		nscroll := z.scroll.Scroll(gtx.Metric, gtx, gtx.Now, gesture.Vertical)
+		pointer.InputOp{Tag: z, Types: pointer.Move}.Add(gtx.Ops)
+
+		for _, ev := range gtx.Events(z) {
+			switch ev := ev.(type) {
+			case pointer.Event:
+				switch ev.Type {
+				case pointer.Move:
+					z.mouse = ev.Position
+				}
 			}
 		}
-	}
 
-	if nscroll != 0 {
-		var change float32
-		if nscroll > 0 {
-			change = 1.1
-		} else {
-			change = 0.9
+		if nscroll != 0 {
+			var change float32
+			if nscroll > 0 {
+				change = 1.1
+			} else {
+				change = 0.9
+			}
+
+			z.tr = z.tr.Scale(z.mouse, f32.Pt(change, change))
 		}
 
-		z.tr = z.tr.Scale(z.mouse, f32.Pt(change, change))
-		if sx, _, ox, _, _, oy := z.tr.Elems(); sx > 0.9 && sx < 1.1 {
-			// Reset scale to 1
-			z.tr = f32.NewAffine2D(1, 0, ox, 0, 1, oy)
-		}
+		op.Affine(z.tr).Add(gtx.Ops)
+		stack.Pop()
 	}
-
-	op.Affine(z.tr).Add(gtx.Ops)
 	return zoomed(gtx)
 }
