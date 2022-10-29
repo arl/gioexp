@@ -50,13 +50,13 @@ func NewUI(theme *material.Theme) *UI {
 	prop1 := &StringProperty{
 		Label:   "prop 1",
 		Value:   "value2",
-		BgColor: red,
+		BgColor: lightGrey,
 		Theme:   theme, // TODO(arl) theme should be passed to layout?
 	}
 	prop2 := &StringProperty{
 		Label:   "prop 2",
 		Value:   "value2",
-		BgColor: blue,
+		BgColor: lightGrey,
 		Theme:   theme, // TODO(arl) theme should be passed to layout?
 	}
 	ui.PropertyList.Add(prop1)

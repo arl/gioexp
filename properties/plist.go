@@ -53,16 +53,15 @@ func (plist *PropertyList) Layout(gtx C) D {
 	}
 	gtx.Constraints = layout.Exact(size)
 
-	return widget.Border{
-		Color: darkGrey,
-		Width: unit.Dp(1),
-	}.Layout(gtx, func(gtx C) D {
+	drawProps := func(gtx C) D {
 		return plist.List.Layout(gtx, len(plist.Properties), func(gtx C, i int) D {
 			gtx.Constraints.Min.Y = int(propertyHeight)
 			gtx.Constraints.Max.Y = int(propertyHeight)
 			return plist.layoutProperty(plist.Properties[i], gtx)
 		})
-	})
+	}
+
+	return drawProps(gtx)
 }
 
 func (plist *PropertyList) layoutProperty(prop *StringProperty, gtx C) D {
@@ -72,7 +71,7 @@ func (plist *PropertyList) layoutProperty(prop *StringProperty, gtx C) D {
 	inset := layout.UniformInset(unit.Dp(1))
 	dimensions := inset.Layout(gtx, func(gtx C) D {
 		return widget.Border{
-			Color:        red,
+			Color:        lightGrey,
 			CornerRadius: unit.Dp(2),
 			Width:        unit.Dp(1),
 		}.Layout(gtx, prop.Layout)

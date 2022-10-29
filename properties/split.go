@@ -22,7 +22,7 @@ type Split struct {
 	dragX  float32
 }
 
-const defaultBarWidth = unit.Dp(2)
+const defaultBarWidth = unit.Dp(3)
 
 func (s *Split) Layout(gtx layout.Context, left, right layout.Widget) layout.Dimensions {
 	bar := gtx.Dp(s.Bar)
