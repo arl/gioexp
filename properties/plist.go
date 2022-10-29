@@ -4,7 +4,9 @@ import (
 	"image"
 	"image/color"
 
+	"gioui.org/io/pointer"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
@@ -13,10 +15,6 @@ import (
 )
 
 var (
-	propertyHeight    = unit.Dp(30)
-	propertyListWidth = unit.Dp(200)
-)
-var (
 	red       = color.NRGBA{R: 255, A: 255}
 	blue      = color.NRGBA{B: 255, A: 255}
 	green     = color.NRGBA{G: 255, A: 255}
@@ -24,11 +22,28 @@ var (
 	darkGrey  = color.NRGBA{R: 169, G: 169, B: 169, A: 255}
 )
 
+var (
+	propertyHeight       = unit.Dp(30)
+	propertyListWidth    = unit.Dp(200)
+	propertyListBarWidth = unit.Dp(3)
+)
+
 type PropertyList struct {
 	Properties []*StringProperty
 
 	List  layout.List
 	Width unit.Dp
+
+	// Ratio keeps the current layout.
+	// 0 is center, -1 completely to the left, 1 completely to the right.
+	Ratio float32
+
+	// Bar is the width for resizing the layout
+	Bar unit.Dp
+
+	drag   bool
+	dragID pointer.ID
+	dragX  float32
 }
 
 func NewPropertyList() *PropertyList {
@@ -53,15 +68,67 @@ func (plist *PropertyList) Layout(gtx C) D {
 	}
 	gtx.Constraints = layout.Exact(size)
 
-	drawProps := func(gtx C) D {
-		return plist.List.Layout(gtx, len(plist.Properties), func(gtx C, i int) D {
-			gtx.Constraints.Min.Y = int(propertyHeight)
-			gtx.Constraints.Max.Y = int(propertyHeight)
-			return plist.layoutProperty(plist.Properties[i], gtx)
-		})
+	proportion := (plist.Ratio + 1) / 2
+
+	bar := gtx.Dp(propertyListBarWidth)
+
+	leftsize := int(proportion*float32(gtx.Constraints.Max.X) - float32(bar))
+	rightoffset := leftsize + bar
+
+	dim := plist.List.Layout(gtx, len(plist.Properties), func(gtx C, i int) D {
+		gtx.Constraints.Min.Y = int(propertyHeight)
+		gtx.Constraints.Max.Y = int(propertyHeight)
+		return plist.layoutProperty(plist.Properties[i], gtx)
+	})
+
+	{
+		// handle input
+		for _, ev := range gtx.Events(plist) {
+			e, ok := ev.(pointer.Event)
+			if !ok {
+				continue
+			}
+
+			switch e.Type {
+			case pointer.Press:
+				if plist.drag {
+					break
+				}
+
+				plist.dragID = e.PointerID
+				plist.dragX = e.Position.X
+
+			case pointer.Drag:
+				if plist.dragID != e.PointerID {
+					break
+				}
+
+				deltaX := e.Position.X - plist.dragX
+				plist.dragX = e.Position.X
+				// TODO(arl) clamp drag position
+				// plist.dragX = clamp(0, e.Position.X, float32(gtx.Constraints.Max.X))
+
+				deltaRatio := deltaX * 2 / float32(gtx.Constraints.Max.X)
+				plist.Ratio += deltaRatio
+
+			case pointer.Release:
+				fallthrough
+			case pointer.Cancel:
+				plist.drag = false
+			}
+		}
+
+		// register for input
+		barRect := image.Rect(leftsize, 0, rightoffset, gtx.Constraints.Max.X)
+		area := clip.Rect(barRect).Push(gtx.Ops)
+		pointer.InputOp{Tag: plist,
+			Types: pointer.Press | pointer.Drag | pointer.Release,
+			Grab:  plist.drag,
+		}.Add(gtx.Ops)
+		area.Pop()
 	}
 
-	return drawProps(gtx)
+	return dim
 }
 
 func (plist *PropertyList) layoutProperty(prop *StringProperty, gtx C) D {
@@ -74,10 +141,36 @@ func (plist *PropertyList) layoutProperty(prop *StringProperty, gtx C) D {
 			Color:        lightGrey,
 			CornerRadius: unit.Dp(2),
 			Width:        unit.Dp(1),
-		}.Layout(gtx, prop.Layout)
+		}.Layout(gtx, func(gtx C) D {
+			return splitLayout(plist.Ratio, gtx.Dp(propertyListBarWidth), gtx, prop.layoutLabel, prop.layoutValue)
+		})
 	})
 
 	return dimensions
+}
+
+func splitLayout(ratio float32, barWidth int, gtx layout.Context, left, right layout.Widget) layout.Dimensions {
+	proportion := (ratio + 1) / 2
+	leftsize := int(proportion*float32(gtx.Constraints.Max.X) - float32(barWidth))
+
+	rightoffset := leftsize + barWidth
+	rightsize := gtx.Constraints.Max.X - rightoffset
+
+	{
+		gtx := gtx
+		gtx.Constraints = layout.Exact(image.Pt(leftsize, gtx.Constraints.Max.Y))
+		left(gtx)
+	}
+
+	{
+		off := op.Offset(image.Pt(rightoffset, 0)).Push(gtx.Ops)
+		gtx := gtx
+		gtx.Constraints = layout.Exact(image.Pt(rightsize, gtx.Constraints.Max.Y))
+		right(gtx)
+		off.Pop()
+	}
+
+	return layout.Dimensions{Size: gtx.Constraints.Max}
 }
 
 type StringProperty struct {
@@ -86,18 +179,10 @@ type StringProperty struct {
 
 	Theme   *material.Theme // TODO(arl) theme should be passed to layout?
 	BgColor color.NRGBA     // TODO(arl) this is just temporary while we test the split
-
-	split Split
-}
-
-func (prop *StringProperty) Layout(gtx C) D {
-	return prop.split.Layout(gtx, prop.layoutLabel, prop.layoutValue)
 }
 
 // TODO(arl) add them as first param?
 func (prop *StringProperty) layoutLabel(gtx C) D {
-	// TODO(arl) continuer ici, ajouter un split, basé sur une valeur passée en paramtere (car controlléé depuis la porpertyList)
-
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
 	paint.FillShape(gtx.Ops, prop.BgColor, rect)
 	body := material.Body1(prop.Theme, prop.Label)
