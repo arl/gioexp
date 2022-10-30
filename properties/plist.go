@@ -9,6 +9,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"gioui.org/text"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -23,7 +24,7 @@ var (
 )
 
 var (
-	propertyHeight       = unit.Dp(30)
+	propertyHeight       = unit.Dp(22)
 	propertyListWidth    = unit.Dp(200)
 	propertyListBarWidth = unit.Dp(3)
 )
@@ -71,7 +72,6 @@ func (plist *PropertyList) Layout(gtx C) D {
 	proportion := (plist.Ratio + 1) / 2
 
 	bar := gtx.Dp(propertyListBarWidth)
-
 	leftsize := int(proportion*float32(gtx.Constraints.Max.X) - float32(bar))
 	rightoffset := leftsize + bar
 
@@ -185,25 +185,59 @@ type StringProperty struct {
 	Label string
 	Value string
 
+	Editable bool
+	editor   widget.Editor
+
 	Theme   *material.Theme // TODO(arl) theme should be passed to layout?
-	BgColor color.NRGBA     // TODO(arl) this is just temporary while we test the split
+	BgColor color.NRGBA
+}
+
+func (prop *StringProperty) SetEditable(editable bool) {
+	prop.Editable = editable
+	if editable {
+		prop.editor.SingleLine = true
+	}
 }
 
 // TODO(arl) add them as first param?
 func (prop *StringProperty) layoutLabel(gtx C) D {
+	// Background color.
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
 	paint.FillShape(gtx.Ops, prop.BgColor, rect)
-	body := material.Body1(prop.Theme, prop.Label)
-	body.MaxLines = 1
-	return layout.W.Layout(gtx, body.Layout)
+
+	inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
+	return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		label := material.Label(prop.Theme, unit.Sp(14), prop.Label)
+		label.MaxLines = 1
+		label.TextSize = unit.Sp(14)
+		label.Font.Weight = 50
+		label.Alignment = text.Start
+		return label.Layout(gtx)
+	})
 }
 
 // TODO(arl) add them as first param?
 func (prop *StringProperty) layoutValue(gtx C) D {
+	// Background color.
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
 	paint.FillShape(gtx.Ops, prop.BgColor, rect)
 
-	body := material.Body1(prop.Theme, prop.Label)
-	body.MaxLines = 1
-	return layout.E.Layout(gtx, body.Layout)
+	inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
+	if prop.Editable {
+		return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			label := material.Editor(prop.Theme, &prop.editor, "")
+			label.TextSize = unit.Sp(14)
+			label.Font.Weight = 50
+			return label.Layout(gtx)
+		})
+	} else {
+		return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			label := material.Label(prop.Theme, unit.Sp(14), prop.Value)
+			label.MaxLines = 1
+			label.TextSize = unit.Sp(14)
+			label.Font.Weight = 50
+			label.Alignment = text.Start
+			return label.Layout(gtx)
+		})
+	}
 }

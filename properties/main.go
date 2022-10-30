@@ -49,16 +49,18 @@ func NewUI(theme *material.Theme) *UI {
 	}
 	prop1 := &StringProperty{
 		Label: "prop 1",
-		Value: "value2",
+		Value: "value 1",
 		// BgColor: lightGrey,
 		Theme: theme, // TODO(arl) theme should be passed to layout?
 	}
 	prop2 := &StringProperty{
 		Label: "prop 2",
-		Value: "value2",
+		Value: "value 2",
 		// BgColor: lightGrey,
 		Theme: theme, // TODO(arl) theme should be passed to layout?
 	}
+	prop1.SetEditable(true)
+	prop2.SetEditable(true)
 	ui.PropertyList.Add(prop1)
 	ui.PropertyList.Add(prop2)
 	return ui
