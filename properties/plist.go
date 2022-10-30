@@ -75,10 +75,16 @@ func (plist *PropertyList) Layout(gtx C) D {
 	leftsize := int(proportion*float32(gtx.Constraints.Max.X) - float32(bar))
 	rightoffset := leftsize + bar
 
-	dim := plist.List.Layout(gtx, len(plist.Properties), func(gtx C, i int) D {
-		gtx.Constraints.Min.Y = int(propertyHeight)
-		gtx.Constraints.Max.Y = int(propertyHeight)
-		return plist.layoutProperty(plist.Properties[i], gtx)
+	dim := widget.Border{
+		Color:        darkGrey,
+		CornerRadius: unit.Dp(2),
+		Width:        unit.Dp(1),
+	}.Layout(gtx, func(gtx C) D {
+		return plist.List.Layout(gtx, len(plist.Properties), func(gtx C, i int) D {
+			gtx.Constraints.Min.Y = int(propertyHeight)
+			gtx.Constraints.Max.Y = int(propertyHeight)
+			return plist.layoutProperty(plist.Properties[i], gtx)
+		})
 	})
 
 	{
@@ -135,13 +141,13 @@ func (plist *PropertyList) layoutProperty(prop *StringProperty, gtx C) D {
 	size := gtx.Constraints.Max
 	gtx.Constraints = layout.Exact(size)
 
-	return widget.Border{
-		Color:        lightGrey,
-		CornerRadius: unit.Dp(2),
-		Width:        unit.Dp(1),
-	}.Layout(gtx, func(gtx C) D {
-		return splitLayout(plist.Ratio, gtx.Dp(propertyListBarWidth), gtx, prop.layoutLabel, prop.layoutValue)
-	})
+	dim := splitLayout(plist.Ratio, gtx.Dp(propertyListBarWidth), gtx, prop.layoutLabel, prop.layoutValue)
+
+	// Draw bottom border
+	rect := clip.Rect{Min: image.Pt(0, size.Y-1), Max: size}.Op()
+	paint.FillShape(gtx.Ops, darkGrey, rect)
+
+	return dim
 }
 
 func splitLayout(ratio float32, barWidth int, gtx layout.Context, left, right layout.Widget) layout.Dimensions {
@@ -158,6 +164,7 @@ func splitLayout(ratio float32, barWidth int, gtx layout.Context, left, right la
 	}
 
 	{
+		// Draw split bar.
 		gtx := gtx
 		rect := clip.Rect{Min: image.Pt(leftsize, 0), Max: image.Pt(rightoffset, gtx.Constraints.Max.Y)}.Op()
 		paint.FillShape(gtx.Ops, darkGrey, rect)
