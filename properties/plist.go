@@ -35,6 +35,10 @@ type PropertyList struct {
 	List  layout.List
 	Width unit.Dp
 
+	// MaxHeight limits the property list height. If not set, the property list
+	// takes all the vertical space it is given.
+	MaxHeight unit.Dp
+
 	// Ratio keeps the current layout.
 	// 0 is center, -1 completely to the left, 1 completely to the right.
 	Ratio float32
@@ -62,10 +66,16 @@ func (plist *PropertyList) Add(prop *StringProperty) {
 
 // TODO(arl) add theme as first param
 func (plist *PropertyList) Layout(gtx C) D {
+	var height int
+	if plist.MaxHeight != 0 {
+		height = int(plist.MaxHeight)
+	} else {
+		height = gtx.Constraints.Max.Y
+	}
 	width := gtx.Metric.Dp(propertyListWidth)
 	size := image.Point{
 		X: width,
-		Y: gtx.Constraints.Max.Y,
+		Y: height,
 	}
 	gtx.Constraints = layout.Exact(size)
 
@@ -88,7 +98,7 @@ func (plist *PropertyList) Layout(gtx C) D {
 	})
 
 	{
-		// handle input
+		// Handle input.
 		for _, ev := range gtx.Events(plist) {
 			e, ok := ev.(pointer.Event)
 			if !ok {
@@ -124,7 +134,7 @@ func (plist *PropertyList) Layout(gtx C) D {
 			}
 		}
 
-		// register for input
+		// Register for input.
 		barRect := image.Rect(leftsize, 0, rightoffset, gtx.Constraints.Max.X)
 		area := clip.Rect(barRect).Push(gtx.Ops)
 		pointer.InputOp{Tag: plist,
@@ -185,7 +195,7 @@ type StringProperty struct {
 	Label string
 	Value string
 
-	Editable bool
+	editable bool
 	editor   widget.Editor
 
 	Theme   *material.Theme // TODO(arl) theme should be passed to layout?
@@ -193,10 +203,14 @@ type StringProperty struct {
 }
 
 func (prop *StringProperty) SetEditable(editable bool) {
-	prop.Editable = editable
+	prop.editable = editable
 	if editable {
 		prop.editor.SingleLine = true
 	}
+}
+
+func (prop *StringProperty) IsEditable() bool {
+	return prop.editable
 }
 
 // TODO(arl) add them as first param?
@@ -216,14 +230,14 @@ func (prop *StringProperty) layoutLabel(gtx C) D {
 	})
 }
 
-// TODO(arl) add them as first param?
+// TODO(arl) add theme as first param?
 func (prop *StringProperty) layoutValue(gtx C) D {
 	// Background color.
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
 	paint.FillShape(gtx.Ops, prop.BgColor, rect)
 
 	inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
-	if prop.Editable {
+	if prop.editable {
 		return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			label := material.Editor(prop.Theme, &prop.editor, "")
 			label.TextSize = unit.Sp(14)

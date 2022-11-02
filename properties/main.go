@@ -10,6 +10,7 @@ import (
 	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
 
@@ -38,31 +39,36 @@ func main() {
 }
 
 type UI struct {
-	Theme        *material.Theme
+	Theme *material.Theme
+
 	PropertyList *PropertyList
+	prop1, prop2 *StringProperty
+
+	btn widget.Clickable
 }
 
 func NewUI(theme *material.Theme) *UI {
 	ui := &UI{
 		Theme:        theme,
 		PropertyList: NewPropertyList(),
+		prop1: &StringProperty{
+			Label: "prop 1",
+			Value: "value 1",
+			// BgColor: lightGrey,
+			Theme: theme, // TODO(arl) theme should be passed to layout?
+		},
+		prop2: &StringProperty{
+			Label: "prop 2",
+			Value: "value 2",
+			// BgColor: lightGrey,
+			Theme: theme, // TODO(arl) theme should be passed to layout?
+		},
 	}
-	prop1 := &StringProperty{
-		Label: "prop 1",
-		Value: "value 1",
-		// BgColor: lightGrey,
-		Theme: theme, // TODO(arl) theme should be passed to layout?
-	}
-	prop2 := &StringProperty{
-		Label: "prop 2",
-		Value: "value 2",
-		// BgColor: lightGrey,
-		Theme: theme, // TODO(arl) theme should be passed to layout?
-	}
-	prop1.SetEditable(true)
-	prop2.SetEditable(true)
-	ui.PropertyList.Add(prop1)
-	ui.PropertyList.Add(prop2)
+	ui.PropertyList.MaxHeight = 300
+	ui.prop1.SetEditable(true)
+	ui.prop2.SetEditable(true)
+	ui.PropertyList.Add(ui.prop1)
+	ui.PropertyList.Add(ui.prop2)
 	return ui
 }
 
@@ -88,5 +94,23 @@ func (ui *UI) Run(w *app.Window) error {
 }
 
 func (ui *UI) Layout(gtx C) D {
-	return ui.PropertyList.Layout(gtx)
+	if ui.btn.Clicked() {
+		ui.prop1.SetEditable(!ui.prop1.IsEditable())
+	}
+
+	return layout.Flex{
+		Axis: layout.Horizontal,
+	}.Layout(gtx,
+		layout.Rigid(func(gtx C) D {
+			return layout.Flex{
+				Axis:    layout.Vertical,
+				Spacing: layout.SpaceEnd,
+			}.Layout(gtx,
+				layout.Rigid(ui.PropertyList.Layout),
+				layout.Rigid(func(gtx C) D {
+					return material.Button(ui.Theme, &ui.btn, "toggle editable").Layout(gtx)
+				}),
+			)
+		}),
+	)
 }
