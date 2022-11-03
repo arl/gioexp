@@ -32,7 +32,7 @@ var (
 )
 
 type PropertyList struct {
-	Properties []*StringProperty
+	Properties []Property
 
 	List  layout.List
 	Width unit.Dp
@@ -62,7 +62,7 @@ func NewPropertyList() *PropertyList {
 	return plist
 }
 
-func (plist *PropertyList) Add(prop *StringProperty) {
+func (plist *PropertyList) Add(prop Property) {
 	plist.Properties = append(plist.Properties, prop)
 }
 
@@ -159,7 +159,7 @@ func clamp[T constraints.Ordered](mn, val, mx T) T {
 	return val
 }
 
-func (plist *PropertyList) layoutProperty(prop *StringProperty, theme *material.Theme, gtx C) D {
+func (plist *PropertyList) layoutProperty(prop Property, theme *material.Theme, gtx C) D {
 	size := gtx.Constraints.Max
 	gtx.Constraints = layout.Exact(size)
 
@@ -176,7 +176,7 @@ func (plist *PropertyList) layoutProperty(prop *StringProperty, theme *material.
 			// Draw label.
 			gtx := gtx
 			gtx.Constraints = layout.Exact(image.Pt(leftsize, gtx.Constraints.Max.Y))
-			prop.layoutLabel(theme, gtx)
+			prop.LayoutLabel(theme, gtx)
 		}
 		{
 			// Draw split bar.
@@ -189,7 +189,7 @@ func (plist *PropertyList) layoutProperty(prop *StringProperty, theme *material.
 			off := op.Offset(image.Pt(rightoffset, 0)).Push(gtx.Ops)
 			gtx := gtx
 			gtx.Constraints = layout.Exact(image.Pt(rightsize, gtx.Constraints.Max.Y))
-			prop.layoutValue(theme, gtx)
+			prop.LayoutValue(theme, gtx)
 			off.Pop()
 		}
 
@@ -201,6 +201,11 @@ func (plist *PropertyList) layoutProperty(prop *StringProperty, theme *material.
 	paint.FillShape(gtx.Ops, darkGrey, rect)
 
 	return dim
+}
+
+type Property interface {
+	LayoutLabel(*material.Theme, layout.Context) layout.Dimensions
+	LayoutValue(*material.Theme, layout.Context) layout.Dimensions
 }
 
 type StringProperty struct {
@@ -226,7 +231,7 @@ func (prop *StringProperty) Editable() bool {
 	return prop.editable
 }
 
-func (prop *StringProperty) layoutLabel(theme *material.Theme, gtx C) D {
+func (prop *StringProperty) LayoutLabel(theme *material.Theme, gtx C) D {
 	// Background color.
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
 	paint.FillShape(gtx.Ops, prop.Background, rect)
@@ -242,7 +247,7 @@ func (prop *StringProperty) layoutLabel(theme *material.Theme, gtx C) D {
 	})
 }
 
-func (prop *StringProperty) layoutValue(theme *material.Theme, gtx C) D {
+func (prop *StringProperty) LayoutValue(theme *material.Theme, gtx C) D {
 	// Draw background color.
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
 	paint.FillShape(gtx.Ops, prop.Background, rect)
