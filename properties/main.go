@@ -52,16 +52,14 @@ func NewUI(theme *material.Theme) *UI {
 		Theme:        theme,
 		PropertyList: NewPropertyList(),
 		prop1: &StringProperty{
-			Label: "prop 1",
-			Value: "value 1",
-			// BgColor: lightGrey,
-			Theme: theme, // TODO(arl) theme should be passed to layout?
+			Label:      "prop 1",
+			Value:      "value 1",
+			Background: aliceBlue,
 		},
 		prop2: &StringProperty{
-			Label: "prop 2",
-			Value: "value 2",
-			// BgColor: lightGrey,
-			Theme: theme, // TODO(arl) theme should be passed to layout?
+			Label:      "prop 2",
+			Value:      "value 2",
+			Background: aliceBlue,
 		},
 	}
 	ui.PropertyList.MaxHeight = 300
@@ -106,7 +104,9 @@ func (ui *UI) Layout(gtx C) D {
 				Axis:    layout.Vertical,
 				Spacing: layout.SpaceEnd,
 			}.Layout(gtx,
-				layout.Rigid(ui.PropertyList.Layout),
+				layout.Rigid(func(gtx C) D {
+					return ui.PropertyList.Layout(ui.Theme, gtx)
+				}),
 				layout.Rigid(func(gtx C) D {
 					return material.Button(ui.Theme, &ui.btn, "toggle editable").Layout(gtx)
 				}),

@@ -21,6 +21,7 @@ var (
 	green     = color.NRGBA{G: 255, A: 255}
 	lightGrey = color.NRGBA{R: 211, G: 211, B: 211, A: 255}
 	darkGrey  = color.NRGBA{R: 169, G: 169, B: 169, A: 255}
+	aliceBlue = color.NRGBA{R: 240, G: 248, B: 255, A: 255}
 )
 
 var (
@@ -64,8 +65,7 @@ func (plist *PropertyList) Add(prop *StringProperty) {
 	plist.Properties = append(plist.Properties, prop)
 }
 
-// TODO(arl) add theme as first param
-func (plist *PropertyList) Layout(gtx C) D {
+func (plist *PropertyList) Layout(theme *material.Theme, gtx C) D {
 	var height int
 	if plist.MaxHeight != 0 {
 		height = int(plist.MaxHeight)
@@ -93,7 +93,7 @@ func (plist *PropertyList) Layout(gtx C) D {
 		return plist.List.Layout(gtx, len(plist.Properties), func(gtx C, i int) D {
 			gtx.Constraints.Min.Y = int(propertyHeight)
 			gtx.Constraints.Max.Y = int(propertyHeight)
-			return plist.layoutProperty(plist.Properties[i], gtx)
+			return plist.layoutProperty(plist.Properties[i], theme, gtx)
 		})
 	})
 
@@ -121,8 +121,6 @@ func (plist *PropertyList) Layout(gtx C) D {
 
 				deltaX := e.Position.X - plist.dragX
 				plist.dragX = e.Position.X
-				// TODO(arl) clamp drag position
-				// plist.dragX = clamp(0, e.Position.X, float32(gtx.Constraints.Max.X))
 
 				deltaRatio := deltaX * 2 / float32(gtx.Constraints.Max.X)
 				plist.Ratio += deltaRatio
@@ -147,48 +145,48 @@ func (plist *PropertyList) Layout(gtx C) D {
 	return dim
 }
 
-func (plist *PropertyList) layoutProperty(prop *StringProperty, gtx C) D {
+func (plist *PropertyList) layoutProperty(prop *StringProperty, theme *material.Theme, gtx C) D {
 	size := gtx.Constraints.Max
 	gtx.Constraints = layout.Exact(size)
 
-	dim := splitLayout(plist.Ratio, gtx.Dp(propertyListBarWidth), gtx, prop.layoutLabel, prop.layoutValue)
+	var dim layout.Dimensions
+	{
+		proportion := (plist.Ratio + 1) / 2
+		barWidth := gtx.Dp(propertyListBarWidth)
+		leftsize := int(proportion*float32(gtx.Constraints.Max.X) - float32(barWidth))
+
+		rightoffset := leftsize + barWidth
+		rightsize := gtx.Constraints.Max.X - rightoffset
+
+		{
+			// Draw label.
+			gtx := gtx
+			gtx.Constraints = layout.Exact(image.Pt(leftsize, gtx.Constraints.Max.Y))
+			prop.layoutLabel(theme, gtx)
+		}
+		{
+			// Draw split bar.
+			gtx := gtx
+			rect := clip.Rect{Min: image.Pt(leftsize, 0), Max: image.Pt(rightoffset, gtx.Constraints.Max.Y)}.Op()
+			paint.FillShape(gtx.Ops, darkGrey, rect)
+		}
+		{
+			// Draw value.
+			off := op.Offset(image.Pt(rightoffset, 0)).Push(gtx.Ops)
+			gtx := gtx
+			gtx.Constraints = layout.Exact(image.Pt(rightsize, gtx.Constraints.Max.Y))
+			prop.layoutValue(theme, gtx)
+			off.Pop()
+		}
+
+		dim = layout.Dimensions{Size: gtx.Constraints.Max}
+	}
 
 	// Draw bottom border
 	rect := clip.Rect{Min: image.Pt(0, size.Y-1), Max: size}.Op()
 	paint.FillShape(gtx.Ops, darkGrey, rect)
 
 	return dim
-}
-
-func splitLayout(ratio float32, barWidth int, gtx layout.Context, left, right layout.Widget) layout.Dimensions {
-	proportion := (ratio + 1) / 2
-	leftsize := int(proportion*float32(gtx.Constraints.Max.X) - float32(barWidth))
-
-	rightoffset := leftsize + barWidth
-	rightsize := gtx.Constraints.Max.X - rightoffset
-
-	{
-		gtx := gtx
-		gtx.Constraints = layout.Exact(image.Pt(leftsize, gtx.Constraints.Max.Y))
-		left(gtx)
-	}
-
-	{
-		// Draw split bar.
-		gtx := gtx
-		rect := clip.Rect{Min: image.Pt(leftsize, 0), Max: image.Pt(rightoffset, gtx.Constraints.Max.Y)}.Op()
-		paint.FillShape(gtx.Ops, darkGrey, rect)
-	}
-
-	{
-		off := op.Offset(image.Pt(rightoffset, 0)).Push(gtx.Ops)
-		gtx := gtx
-		gtx.Constraints = layout.Exact(image.Pt(rightsize, gtx.Constraints.Max.Y))
-		right(gtx)
-		off.Pop()
-	}
-
-	return layout.Dimensions{Size: gtx.Constraints.Max}
 }
 
 type StringProperty struct {
@@ -198,8 +196,7 @@ type StringProperty struct {
 	editable bool
 	editor   widget.Editor
 
-	Theme   *material.Theme // TODO(arl) theme should be passed to layout?
-	BgColor color.NRGBA
+	Background color.NRGBA
 }
 
 func (prop *StringProperty) SetEditable(editable bool) {
@@ -215,15 +212,14 @@ func (prop *StringProperty) Editable() bool {
 	return prop.editable
 }
 
-// TODO(arl) add theme as first param?
-func (prop *StringProperty) layoutLabel(gtx C) D {
+func (prop *StringProperty) layoutLabel(theme *material.Theme, gtx C) D {
 	// Background color.
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
-	paint.FillShape(gtx.Ops, prop.BgColor, rect)
+	paint.FillShape(gtx.Ops, prop.Background, rect)
 
 	inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
 	return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		label := material.Label(prop.Theme, unit.Sp(14), prop.Label)
+		label := material.Label(theme, unit.Sp(14), prop.Label)
 		label.MaxLines = 1
 		label.TextSize = unit.Sp(14)
 		label.Font.Weight = 50
@@ -232,17 +228,16 @@ func (prop *StringProperty) layoutLabel(gtx C) D {
 	})
 }
 
-// TODO(arl) add theme as first param?
-func (prop *StringProperty) layoutValue(gtx C) D {
+func (prop *StringProperty) layoutValue(theme *material.Theme, gtx C) D {
 	// Draw background color.
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
-	paint.FillShape(gtx.Ops, prop.BgColor, rect)
+	paint.FillShape(gtx.Ops, prop.Background, rect)
 
 	inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
 	if prop.editable {
-		return FocusBorder(prop.Theme, prop.editor.Focused()).Layout(gtx, func(gtx C) D {
+		return FocusBorder(theme, prop.editor.Focused()).Layout(gtx, func(gtx C) D {
 			return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				label := material.Editor(prop.Theme, &prop.editor, "")
+				label := material.Editor(theme, &prop.editor, "")
 				label.TextSize = unit.Sp(14)
 				label.Font.Weight = 50
 				return label.Layout(gtx)
@@ -251,7 +246,7 @@ func (prop *StringProperty) layoutValue(gtx C) D {
 	}
 
 	return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		label := material.Label(prop.Theme, unit.Sp(14), prop.Value)
+		label := material.Label(theme, unit.Sp(14), prop.Value)
 		label.MaxLines = 1
 		label.TextSize = unit.Sp(14)
 		label.Font.Weight = 50
