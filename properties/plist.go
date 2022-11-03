@@ -13,6 +13,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"golang.org/x/exp/constraints"
 )
 
 var (
@@ -119,15 +120,18 @@ func (plist *PropertyList) Layout(theme *material.Theme, gtx C) D {
 					break
 				}
 
-				deltaX := e.Position.X - plist.dragX
-				plist.dragX = e.Position.X
+				// Clamp drag position so that the 'handle' remains always visible.
+				minposx := int(propertyListBarWidth)
+				maxposx := gtx.Constraints.Max.X - int(propertyListBarWidth)
+				posx := float32(clamp(minposx, int(e.Position.X), maxposx))
+
+				deltaX := posx - plist.dragX
+				plist.dragX = posx
 
 				deltaRatio := deltaX * 2 / float32(gtx.Constraints.Max.X)
 				plist.Ratio += deltaRatio
 
-			case pointer.Release:
-				fallthrough
-			case pointer.Cancel:
+			case pointer.Release, pointer.Cancel:
 				plist.drag = false
 			}
 		}
@@ -143,6 +147,16 @@ func (plist *PropertyList) Layout(theme *material.Theme, gtx C) D {
 	}
 
 	return dim
+}
+
+func clamp[T constraints.Ordered](mn, val, mx T) T {
+	if val < mn {
+		return mn
+	}
+	if val > mx {
+		return mx
+	}
+	return val
 }
 
 func (plist *PropertyList) layoutProperty(prop *StringProperty, theme *material.Theme, gtx C) D {
