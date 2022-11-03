@@ -204,16 +204,18 @@ type StringProperty struct {
 
 func (prop *StringProperty) SetEditable(editable bool) {
 	prop.editable = editable
-	if editable {
+	if !editable {
+		prop.Value = prop.editor.Text()
+	} else {
 		prop.editor.SingleLine = true
 	}
 }
 
-func (prop *StringProperty) IsEditable() bool {
+func (prop *StringProperty) Editable() bool {
 	return prop.editable
 }
 
-// TODO(arl) add them as first param?
+// TODO(arl) add theme as first param?
 func (prop *StringProperty) layoutLabel(gtx C) D {
 	// Background color.
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
@@ -232,26 +234,28 @@ func (prop *StringProperty) layoutLabel(gtx C) D {
 
 // TODO(arl) add theme as first param?
 func (prop *StringProperty) layoutValue(gtx C) D {
-	// Background color.
+	// Draw background color.
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
 	paint.FillShape(gtx.Ops, prop.BgColor, rect)
 
 	inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
 	if prop.editable {
-		return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			label := material.Editor(prop.Theme, &prop.editor, "")
-			label.TextSize = unit.Sp(14)
-			label.Font.Weight = 50
-			return label.Layout(gtx)
-		})
-	} else {
-		return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			label := material.Label(prop.Theme, unit.Sp(14), prop.Value)
-			label.MaxLines = 1
-			label.TextSize = unit.Sp(14)
-			label.Font.Weight = 50
-			label.Alignment = text.Start
-			return label.Layout(gtx)
+		return FocusBorder(prop.Theme, prop.editor.Focused()).Layout(gtx, func(gtx C) D {
+			return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				label := material.Editor(prop.Theme, &prop.editor, "")
+				label.TextSize = unit.Sp(14)
+				label.Font.Weight = 50
+				return label.Layout(gtx)
+			})
 		})
 	}
+
+	return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		label := material.Label(prop.Theme, unit.Sp(14), prop.Value)
+		label.MaxLines = 1
+		label.TextSize = unit.Sp(14)
+		label.Font.Weight = 50
+		label.Alignment = text.Start
+		return label.Layout(gtx)
+	})
 }

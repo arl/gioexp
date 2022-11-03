@@ -95,7 +95,7 @@ func (ui *UI) Run(w *app.Window) error {
 
 func (ui *UI) Layout(gtx C) D {
 	if ui.btn.Clicked() {
-		ui.prop1.SetEditable(!ui.prop1.IsEditable())
+		ui.prop1.SetEditable(!ui.prop1.Editable())
 	}
 
 	return layout.Flex{
