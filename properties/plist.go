@@ -3,6 +3,8 @@ package main
 import (
 	"image"
 	"image/color"
+	"strconv"
+	"time"
 
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
@@ -32,7 +34,7 @@ var (
 )
 
 type PropertyList struct {
-	Properties []Property
+	Properties []*Property
 
 	List  layout.List
 	Width unit.Dp
@@ -62,7 +64,7 @@ func NewPropertyList() *PropertyList {
 	return plist
 }
 
-func (plist *PropertyList) Add(prop Property) {
+func (plist *PropertyList) Add(prop *Property) {
 	plist.Properties = append(plist.Properties, prop)
 }
 
@@ -159,7 +161,7 @@ func clamp[T constraints.Ordered](mn, val, mx T) T {
 	return val
 }
 
-func (plist *PropertyList) layoutProperty(prop Property, theme *material.Theme, gtx C) D {
+func (plist *PropertyList) layoutProperty(prop *Property, theme *material.Theme, gtx C) D {
 	size := gtx.Constraints.Max
 	gtx.Constraints = layout.Exact(size)
 
@@ -203,41 +205,63 @@ func (plist *PropertyList) layoutProperty(prop Property, theme *material.Theme, 
 	return dim
 }
 
-type Property interface {
-	LayoutLabel(*material.Theme, layout.Context) layout.Dimensions
-	LayoutValue(*material.Theme, layout.Context) layout.Dimensions
+type Value interface {
+	String() string
+	Set(string) error
 }
 
-type StringProperty struct {
+type Property struct {
 	Label string
-	Value string
 
 	editable bool
+	hasFocus bool
 	editor   widget.Editor
 
 	Background color.NRGBA
+
+	val Value
 }
 
-func (prop *StringProperty) SetEditable(editable bool) {
-	prop.editable = editable
-	if !editable {
-		prop.Value = prop.editor.Text()
-	} else {
-		prop.editor.SingleLine = true
+// TODO(arl) comment
+//
+// NewProperty...
+//
+// filter is the list of characters allowed in the Editor. If Filter is empty,
+// all characters are allowed.
+func NewProperty[T Value](filter string, initial T) *Property {
+	prop1 := &Property{
+		val: initial,
+		editor: widget.Editor{
+			SingleLine: true,
+			Filter:     filter,
+		},
+	}
+	prop1.editor.SetText(initial.String())
+	return prop1
+}
+
+func (prop *Property) SetValue(val Value) {
+	if err := prop.val.Set(val.String()); err != nil {
+		// This is a developer error, a value of the wrong type has been passed.
+		panic(err)
 	}
 }
 
-func (prop *StringProperty) Editable() bool {
+func (prop *Property) SetEditable(editable bool) {
+	prop.editable = editable
+}
+
+func (prop *Property) Editable() bool {
 	return prop.editable
 }
 
-func (prop *StringProperty) LayoutLabel(theme *material.Theme, gtx C) D {
+func (prop *Property) LayoutLabel(theme *material.Theme, gtx C) D {
 	// Background color.
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
 	paint.FillShape(gtx.Ops, prop.Background, rect)
 
 	inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
-	return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+	return inset.Layout(gtx, func(gtx C) D {
 		label := material.Label(theme, unit.Sp(14), prop.Label)
 		label.MaxLines = 1
 		label.TextSize = unit.Sp(14)
@@ -247,15 +271,30 @@ func (prop *StringProperty) LayoutLabel(theme *material.Theme, gtx C) D {
 	})
 }
 
-func (prop *StringProperty) LayoutValue(theme *material.Theme, gtx C) D {
+func (prop *Property) LayoutValue(theme *material.Theme, gtx C) D {
 	// Draw background color.
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
 	paint.FillShape(gtx.Ops, prop.Background, rect)
 
+	hadFocus := prop.hasFocus
+	prop.hasFocus = prop.editor.Focused()
+	if hadFocus && !prop.hasFocus {
+		// Lost focus is when we check the property string validity with respect
+		// to the value type.
+		if err := prop.val.Set(prop.editor.Text()); err != nil {
+			// TODO(arl) should we give the user a visual feedback in case of
+			// validation error? maybe animate a red flash.
+
+			// Revert the property text to the previous valid value.
+			prop.editor.SetText(prop.val.String())
+		}
+	}
+
+	// Draw value as an editor or a label.
 	inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
 	if prop.editable {
-		return FocusBorder(theme, prop.editor.Focused()).Layout(gtx, func(gtx C) D {
-			return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		return FocusBorder(theme, prop.hasFocus).Layout(gtx, func(gtx C) D {
+			return inset.Layout(gtx, func(gtx C) D {
 				label := material.Editor(theme, &prop.editor, "")
 				label.TextSize = unit.Sp(14)
 				label.Font.Weight = 50
@@ -264,12 +303,30 @@ func (prop *StringProperty) LayoutValue(theme *material.Theme, gtx C) D {
 		})
 	}
 
-	return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		label := material.Label(theme, unit.Sp(14), prop.Value)
-		label.MaxLines = 1
-		label.TextSize = unit.Sp(14)
-		label.Font.Weight = 50
-		label.Alignment = text.Start
-		return label.Layout(gtx)
+	return FocusBorder(theme, prop.hasFocus).Layout(gtx, func(gtx C) D {
+		return inset.Layout(gtx, func(gtx C) D {
+			label := material.Label(theme, unit.Sp(14), prop.val.String())
+			label.MaxLines = 1
+			label.TextSize = unit.Sp(14)
+			label.Font.Weight = 50
+			label.Alignment = text.Start
+			return label.Layout(gtx)
+			var d time.Duration
+		})
 	})
 }
+
+type UIntValue uint
+
+func (i *UIntValue) Set(s string) error {
+	v, err := strconv.ParseUint(s, 0, strconv.IntSize)
+	if err != nil {
+		return err
+	}
+	*i = UIntValue(v)
+	return nil
+}
+
+func (i *UIntValue) Get() any { return uint(*i) }
+
+func (i *UIntValue) String() string { return strconv.FormatUint(uint64(*i), 10) }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -42,29 +43,33 @@ type UI struct {
 	Theme *material.Theme
 
 	PropertyList *PropertyList
-	prop1, prop2 *StringProperty
+	prop1, prop2 *Property
 
 	btn widget.Clickable
 }
 
+var p1 UIntValue = 123456
+var p2 UIntValue = 1234
+
 func NewUI(theme *material.Theme) *UI {
+	prop1 := NewProperty("0123456789", &p1)
+	prop1.Label = "Property 1"
+	prop1.Background = aliceBlue
+	prop1.SetEditable(true)
+
+	prop2 := NewProperty("", &p2)
+	prop2.Label = "Property 1"
+	prop2.Background = aliceBlue
+	prop2.SetEditable(true)
+
 	ui := &UI{
 		Theme:        theme,
 		PropertyList: NewPropertyList(),
-		prop1: &StringProperty{
-			Label:      "prop 1",
-			Value:      "value 1",
-			Background: aliceBlue,
-		},
-		prop2: &StringProperty{
-			Label:      "prop 2",
-			Value:      "value 2",
-			Background: aliceBlue,
-		},
+		prop1:        prop1,
+		prop2:        prop2,
 	}
 	ui.PropertyList.MaxHeight = 300
-	ui.prop1.SetEditable(true)
-	ui.prop2.SetEditable(true)
+
 	ui.PropertyList.Add(ui.prop1)
 	ui.PropertyList.Add(ui.prop2)
 	return ui
@@ -78,6 +83,8 @@ func (ui *UI) Run(w *app.Window) error {
 			gtx := layout.NewContext(&ops, e)
 			ui.Layout(gtx)
 			e.Frame(gtx.Ops)
+
+			fmt.Println(p1, p2)
 
 		case key.Event:
 			if e.Name == key.NameEscape {
