@@ -42,14 +42,15 @@ func main() {
 type UI struct {
 	Theme *material.Theme
 
-	PropertyList *PropertyList
-	prop1, prop2 *Property
+	PropertyList        *PropertyList
+	prop1, prop2, prop3 *Property
 
 	btn widget.Clickable
 }
 
 var p1 UIntValue = 123456
 var p2 UIntValue = 1234
+var p3 Float64Value = .2
 
 func NewUI(theme *material.Theme) *UI {
 	prop1 := NewProperty("0123456789", &p1)
@@ -62,16 +63,23 @@ func NewUI(theme *material.Theme) *UI {
 	prop2.Background = aliceBlue
 	prop2.SetEditable(true)
 
+	prop3 := NewProperty("", &p3)
+	prop3.Label = "Float64"
+	prop3.Background = aliceBlue
+	prop3.SetEditable(true)
+
 	ui := &UI{
 		Theme:        theme,
 		PropertyList: NewPropertyList(),
 		prop1:        prop1,
 		prop2:        prop2,
+		prop3:        prop3,
 	}
 	ui.PropertyList.MaxHeight = 300
 
 	ui.PropertyList.Add(ui.prop1)
 	ui.PropertyList.Add(ui.prop2)
+	ui.PropertyList.Add(ui.prop3)
 	return ui
 }
 
