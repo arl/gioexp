@@ -4,7 +4,6 @@ import (
 	"image"
 	"image/color"
 	"strconv"
-	"time"
 
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
@@ -283,14 +282,14 @@ func (prop *Property) LayoutValue(theme *material.Theme, gtx C) D {
 		// to the value type.
 		if err := prop.val.Set(prop.editor.Text()); err != nil {
 			// TODO(arl) should we give the user a visual feedback in case of
-			// validation error? maybe animate a red flash.
+			// validation error? maybe animate a red flash. or set a red background that would quickly fade into the normal background color
 
 			// Revert the property text to the previous valid value.
 			prop.editor.SetText(prop.val.String())
 		}
 	}
 
-	// Draw value as an editor or a label.
+	// Draw value as an editor or a label depending on whether the property is editable or not.
 	inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
 	if prop.editable {
 		return FocusBorder(theme, prop.hasFocus).Layout(gtx, func(gtx C) D {
@@ -310,6 +309,7 @@ func (prop *Property) LayoutValue(theme *material.Theme, gtx C) D {
 			label.TextSize = unit.Sp(14)
 			label.Font.Weight = 50
 			label.Alignment = text.Start
+			label.Color = darkGrey
 			return label.Layout(gtx)
 			var d time.Duration
 		})
@@ -330,3 +330,18 @@ func (i *UIntValue) Set(s string) error {
 func (i *UIntValue) Get() any { return uint(*i) }
 
 func (i *UIntValue) String() string { return strconv.FormatUint(uint64(*i), 10) }
+
+type Float64Value float64
+
+func (i *Float64Value) Set(s string) error {
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return err
+	}
+	*i = Float64Value(v)
+	return nil
+}
+
+func (i *Float64Value) Get() any { return uint(*i) }
+
+func (i *Float64Value) String() string { return strconv.FormatFloat(float64(*i), 'g', 3, 64) }
