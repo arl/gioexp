@@ -227,42 +227,38 @@ type Value interface {
 	Set(string) error
 }
 
-// TODO(arl) maybe rename to TextProperty
 type Property struct {
 	Label string
 
 	editable bool
-	hasFocus bool
-	editor   widget.Editor
+	w        ValueWidget
 
 	Background color.NRGBA
+}
 
-	val Value
+func NewFloat64Property(initial float64) *Property {
+	return NewTypedProperty("0123456789.eE+-", (*Float64Value)(&initial))
+}
+
+func NewUIntProperty(initial uint) *Property {
+	return NewTypedProperty("0123456789", (*UIntValue)(&initial))
 }
 
 // TODO(arl) comment
 //
-// NewProperty...
+// NewTypedProperty...
 //
 // filter is the list of characters allowed in the Editor. If Filter is empty,
 // all characters are allowed.
-func NewProperty(filter string, initial Value) *Property {
-	prop1 := &Property{
-		val: initial,
-		editor: widget.Editor{
-			SingleLine: true,
-			Filter:     filter,
-		},
+func NewTypedProperty(filter string, initial Value) *Property {
+	p := &Property{
+		w: newTypedValueWidget(initial, blue),
 	}
-	prop1.editor.SetText(initial.String())
-	return prop1
+	return p
 }
 
-func (prop *Property) SetValue(val Value) {
-	if err := prop.val.Set(val.String()); err != nil {
-		// This is a developer error, a value of the wrong type has been passed.
-		panic(err)
-	}
+func (prop *Property) LayoutValue(theme *material.Theme, gtx C) D {
+	return prop.w.LayoutValue(theme, prop.editable, gtx)
 }
 
 func (prop *Property) SetEditable(editable bool) {
@@ -276,7 +272,7 @@ func (prop *Property) Editable() bool {
 func (prop *Property) LayoutLabel(theme *material.Theme, gtx C) D {
 	// Background color.
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
-	paint.FillShape(gtx.Ops, prop.Background, rect)
+	paint.FillShape(gtx.Ops, theme.Bg, rect)
 
 	inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
 	return inset.Layout(gtx, func(gtx C) D {
@@ -289,31 +285,65 @@ func (prop *Property) LayoutLabel(theme *material.Theme, gtx C) D {
 	})
 }
 
-func (prop *Property) LayoutValue(theme *material.Theme, gtx C) D {
+type ValueWidget interface {
+	LayoutValue(theme *material.Theme, editable bool, gtx C) D
+	Value() Value
+	SetValue(Value)
+}
+
+type TypedValueWidget struct {
+	hasFocus bool
+	editor   widget.Editor
+
+	bgcolor color.NRGBA
+	val     Value
+}
+
+func newTypedValueWidget(initial Value, bgcolor color.NRGBA) *TypedValueWidget {
+	tv := &TypedValueWidget{
+		bgcolor: bgcolor,
+		val:     initial,
+	}
+	tv.SetValue(initial)
+	return tv
+}
+
+func (tv *TypedValueWidget) SetValue(val Value) {
+	tv.val = val
+	tv.editor.SetText(tv.val.String())
+}
+
+func (tv *TypedValueWidget) Value() Value {
+	return tv.val
+}
+
+func (tv *TypedValueWidget) LayoutValue(theme *material.Theme, editable bool, gtx C) D {
 	// Draw background color.
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
-	paint.FillShape(gtx.Ops, prop.Background, rect)
+	paint.FillShape(gtx.Ops, theme.Bg, rect)
 
-	hadFocus := prop.hasFocus
-	prop.hasFocus = prop.editor.Focused()
-	if hadFocus && !prop.hasFocus {
-		// Lost focus is when we check the property string validity with respect
-		// to the value type.
-		if err := prop.val.Set(prop.editor.Text()); err != nil {
+	hadFocus := tv.hasFocus
+	tv.hasFocus = tv.editor.Focused()
+	if hadFocus && !tv.hasFocus {
+		// We've just lost focus, it's the moment to check the
+		// validity of the typed string.
+		if err := tv.val.Set(tv.editor.Text()); err != nil {
 			// TODO(arl) should we give the user a visual feedback in case of
-			// validation error? maybe animate a red flash. or set a red background that would quickly fade into the normal background color
+			// validation error? maybe animate a red flash. or set a red
+			// background that would quickly fade into the normal background
+			// color
 
 			// Revert the property text to the previous valid value.
-			prop.editor.SetText(prop.val.String())
+			tv.editor.SetText(tv.val.String())
 		}
 	}
 
 	// Draw value as an editor or a label depending on whether the property is editable or not.
 	inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
-	if prop.editable {
-		return FocusBorder(theme, prop.hasFocus).Layout(gtx, func(gtx C) D {
+	if editable {
+		return FocusBorder(theme, tv.hasFocus).Layout(gtx, func(gtx C) D {
 			return inset.Layout(gtx, func(gtx C) D {
-				label := material.Editor(theme, &prop.editor, "")
+				label := material.Editor(theme, &tv.editor, "")
 				label.TextSize = unit.Sp(14)
 				label.Font.Weight = 50
 				return label.Layout(gtx)
@@ -321,9 +351,9 @@ func (prop *Property) LayoutValue(theme *material.Theme, gtx C) D {
 		})
 	}
 
-	return FocusBorder(theme, prop.hasFocus).Layout(gtx, func(gtx C) D {
+	return FocusBorder(theme, tv.hasFocus).Layout(gtx, func(gtx C) D {
 		return inset.Layout(gtx, func(gtx C) D {
-			label := material.Label(theme, unit.Sp(14), prop.val.String())
+			label := material.Label(theme, unit.Sp(14), tv.val.String())
 			label.MaxLines = 1
 			label.TextSize = unit.Sp(14)
 			label.Font.Weight = 50

@@ -53,22 +53,19 @@ type UI struct {
 	Modal component.ModalState
 }
 
-var p1 UIntValue = 123456
-var p2 UIntValue = 1234
-var p3 Float64Value = .2
-
 func NewUI(theme *material.Theme) *UI {
-	prop1 := NewProperty("0123456789", &p1)
+	prop1 := NewUIntProperty(123456)
 	prop1.Label = "Property 1"
 	prop1.Background = aliceBlue
 	prop1.SetEditable(true)
 
-	prop2 := NewProperty("", &p2)
+	var p2val UIntValue = 123
+	prop2 := NewTypedProperty("", &p2val)
 	prop2.Label = "Property 1"
 	prop2.Background = aliceBlue
 	prop2.SetEditable(true)
 
-	prop3 := NewProperty("", &p3)
+	prop3 := NewFloat64Property(.2)
 	prop3.Label = "Float64"
 	prop3.Background = aliceBlue
 	prop3.SetEditable(true)
