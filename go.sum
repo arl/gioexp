@@ -6,6 +6,8 @@ gioui.org/cpu v0.0.0-20210817075930-8d6a761490d2 h1:AGDDxsJE1RpcXTAxPG2B4jrwVUJG
 gioui.org/cpu v0.0.0-20210817075930-8d6a761490d2/go.mod h1:A8M0Cn5o+vY5LTMlnRoK3O5kG+rH0kWfJjeKd9QpBmQ=
 gioui.org/shader v1.0.6 h1:cvZmU+eODFR2545X+/8XucgZdTtEjR3QWW6W65b0q5Y=
 gioui.org/shader v1.0.6/go.mod h1:mWdiME581d/kV7/iEhLmUgUK5iZ09XR5XpduXzbePVM=
+gioui.org/x v0.0.0-20221103142138-d48590498bfc h1:E9cjWP7gchJFOOIeNDZy033QqaEhmZXNlavVyR1DFnI=
+gioui.org/x v0.0.0-20221103142138-d48590498bfc/go.mod h1:uhVlN625ysZfFEbEdxt+wgyCGW2sh5p6SYs9dr+w+u4=
 github.com/benoitkugler/pstokenizer v1.0.0/go.mod h1:l1G2Voirz0q/jj0TQfabNxVsa8HZXh/VMxFSRALWTiE=
 github.com/benoitkugler/textlayout v0.0.5/go.mod h1:puH4v13Uz7uIhIH0XMk5jgc8U3MXcn5r3VlV9K8n0D8=
 github.com/benoitkugler/textlayout v0.1.3 h1:Jv0E28xDkke3KrWle90yOLtBmZsUqXLBy70lZRfbKN0=

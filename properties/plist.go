@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"gioui.org/x/component"
 	"golang.org/x/exp/constraints"
 )
 
@@ -52,13 +54,18 @@ type PropertyList struct {
 	drag   bool
 	dragID pointer.ID
 	dragX  float32
+
+	// The modal plane on which properties temorarily needing more space can lay
+	// out themselves.
+	modal *component.ModalState
 }
 
-func NewPropertyList() *PropertyList {
+func NewPropertyList(modal *component.ModalState) *PropertyList {
 	plist := &PropertyList{
 		List: layout.List{
 			Axis: layout.Vertical,
 		},
+		modal: modal,
 	}
 	return plist
 }
@@ -95,7 +102,7 @@ func (plist *PropertyList) Layout(theme *material.Theme, gtx C) D {
 		return plist.List.Layout(gtx, len(plist.Properties), func(gtx C, i int) D {
 			gtx.Constraints.Min.Y = int(propertyHeight)
 			gtx.Constraints.Max.Y = int(propertyHeight)
-			return plist.layoutProperty(plist.Properties[i], theme, gtx)
+			return plist.layoutProperty(plist.Properties[i], theme, plist.modal, gtx)
 		})
 	})
 
@@ -160,7 +167,7 @@ func clamp[T constraints.Ordered](mn, val, mx T) T {
 	return val
 }
 
-func (plist *PropertyList) layoutProperty(prop *Property, theme *material.Theme, gtx C) D {
+func (plist *PropertyList) layoutProperty(prop *Property, theme *material.Theme, modal *component.ModalState, gtx C) D {
 	size := gtx.Constraints.Max
 	gtx.Constraints = layout.Exact(size)
 
@@ -194,6 +201,17 @@ func (plist *PropertyList) layoutProperty(prop *Property, theme *material.Theme,
 			off.Pop()
 		}
 
+		// Test, draw modal
+		modal.Show(gtx.Now, func(gtx C) D {
+			// Draw a red rectangle
+			size := gtx.Constraints.Max
+			rect := clip.Rect{Min: image.Pt(100, 100), Max: size}.Op()
+			paint.FillShape(gtx.Ops, red, rect)
+
+			fmt.Println("in modal, max", gtx.Constraints.Max)
+			return D{Size: size}
+		})
+
 		dim = layout.Dimensions{Size: gtx.Constraints.Max}
 	}
 
@@ -209,6 +227,7 @@ type Value interface {
 	Set(string) error
 }
 
+// TODO(arl) maybe rename to TextProperty
 type Property struct {
 	Label string
 
@@ -227,7 +246,7 @@ type Property struct {
 //
 // filter is the list of characters allowed in the Editor. If Filter is empty,
 // all characters are allowed.
-func NewProperty[T Value](filter string, initial T) *Property {
+func NewProperty(filter string, initial Value) *Property {
 	prop1 := &Property{
 		val: initial,
 		editor: widget.Editor{
@@ -311,7 +330,6 @@ func (prop *Property) LayoutValue(theme *material.Theme, gtx C) D {
 			label.Alignment = text.Start
 			label.Color = darkGrey
 			return label.Layout(gtx)
-			var d time.Duration
 		})
 	})
 }

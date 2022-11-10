@@ -1,9 +1,10 @@
 package main
 
 import (
-	"fmt"
+	"image/color"
 	"log"
 	"os"
+	"time"
 
 	"gioui.org/app"
 	"gioui.org/font/gofont"
@@ -13,6 +14,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"gioui.org/x/component"
 )
 
 type (
@@ -46,6 +48,9 @@ type UI struct {
 	prop1, prop2, prop3 *Property
 
 	btn widget.Clickable
+
+	// Modal can show widgets atop the rest of the ui.
+	Modal component.ModalState
 }
 
 var p1 UIntValue = 123456
@@ -69,17 +74,22 @@ func NewUI(theme *material.Theme) *UI {
 	prop3.SetEditable(true)
 
 	ui := &UI{
-		Theme:        theme,
-		PropertyList: NewPropertyList(),
-		prop1:        prop1,
-		prop2:        prop2,
-		prop3:        prop3,
+		Theme: theme,
+		prop1: prop1,
+		prop2: prop2,
+		prop3: prop3,
 	}
-	ui.PropertyList.MaxHeight = 300
 
-	ui.PropertyList.Add(ui.prop1)
-	ui.PropertyList.Add(ui.prop2)
-	ui.PropertyList.Add(ui.prop3)
+	ui.Modal.VisibilityAnimation.Duration = time.Millisecond * 250
+
+	plist := NewPropertyList(&ui.Modal)
+	plist.MaxHeight = 300
+	plist.Add(ui.prop1)
+	plist.Add(ui.prop2)
+	plist.Add(ui.prop3)
+
+	ui.PropertyList = plist
+
 	return ui
 }
 
@@ -91,8 +101,6 @@ func (ui *UI) Run(w *app.Window) error {
 			gtx := layout.NewContext(&ops, e)
 			ui.Layout(gtx)
 			e.Frame(gtx.Ops)
-
-			fmt.Println(p1, p2)
 
 		case key.Event:
 			if e.Name == key.NameEscape {
@@ -111,21 +119,45 @@ func (ui *UI) Layout(gtx C) D {
 		ui.prop1.SetEditable(!ui.prop1.Editable())
 	}
 
-	return layout.Flex{
-		Axis: layout.Horizontal,
-	}.Layout(gtx,
-		layout.Rigid(func(gtx C) D {
+	return layout.Stack{}.Layout(gtx,
+		layout.Stacked(func(gtx C) D {
+			gtx.Constraints.Min = gtx.Constraints.Max
 			return layout.Flex{
-				Axis:    layout.Vertical,
-				Spacing: layout.SpaceEnd,
+				Axis: layout.Horizontal,
 			}.Layout(gtx,
 				layout.Rigid(func(gtx C) D {
-					return ui.PropertyList.Layout(ui.Theme, gtx)
-				}),
-				layout.Rigid(func(gtx C) D {
-					return material.Button(ui.Theme, &ui.btn, "toggle editable").Layout(gtx)
+					return layout.Flex{
+						Axis:    layout.Vertical,
+						Spacing: layout.SpaceEnd,
+					}.Layout(gtx,
+						layout.Rigid(func(gtx C) D {
+							return ui.PropertyList.Layout(ui.Theme, gtx)
+						}),
+						layout.Rigid(func(gtx C) D {
+							return material.Button(ui.Theme, &ui.btn, "toggle editable").Layout(gtx)
+						}),
+					)
 				}),
 			)
 		}),
+		layout.Expanded(func(gtx C) D {
+			return ui.layoutModal(gtx)
+		}),
 	)
+}
+
+func (ui *UI) layoutModal(gtx C) D {
+	if ui.Modal.Clicked() {
+		ui.Modal.ToggleVisibility(gtx.Now)
+	}
+
+	return component.Modal(ui.Theme, &ui.Modal).Layout(gtx)
+}
+
+func rgb(c uint32) color.NRGBA {
+	return argb(0xff000000 | c)
+}
+
+func argb(c uint32) color.NRGBA {
+	return color.NRGBA{A: uint8(c >> 24), R: uint8(c >> 16), G: uint8(c >> 8), B: uint8(c)}
 }
