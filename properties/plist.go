@@ -288,7 +288,7 @@ func (prop *Property) LayoutLabel(theme *material.Theme, gtx C) D {
 type ValueWidget interface {
 	LayoutValue(theme *material.Theme, editable bool, gtx C) D
 	Value() Value
-	SetValue(Value)
+	SetValue(Value) error
 }
 
 type TypedValueWidget struct {
@@ -308,11 +308,15 @@ func newTypedValueWidget(initial Value, bgcolor color.NRGBA) *TypedValueWidget {
 	return tv
 }
 
-func (tv *TypedValueWidget) SetValue(val Value) {
+// TODO(arl) add unit tests, check that SetValue sets the value to display.
+func (tv *TypedValueWidget) SetValue(val Value) error {
 	tv.val = val
 	tv.editor.SetText(tv.val.String())
+	// Converting a non-nil Value to string can't fail.
+	return nil
 }
 
+// TODO(arl) add unit tests, check that Value returns the currently displayed value.
 func (tv *TypedValueWidget) Value() Value {
 	return tv.val
 }
@@ -334,7 +338,7 @@ func (tv *TypedValueWidget) LayoutValue(theme *material.Theme, editable bool, gt
 			// color
 
 			// Revert the property text to the previous valid value.
-			tv.editor.SetText(tv.val.String())
+			tv.SetValue(tv.val)
 		}
 	}
 
