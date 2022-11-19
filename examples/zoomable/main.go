@@ -15,6 +15,8 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/widget/material"
+
+	"github.com/arl/gioexp/components/zoomable"
 )
 
 type (
@@ -46,7 +48,7 @@ func main() {
 
 type UI struct {
 	Theme    *material.Theme
-	Zoomable Zoomable
+	Zoomable zoomable.Zoomable
 }
 
 func (ui *UI) Run(w *app.Window) error {
