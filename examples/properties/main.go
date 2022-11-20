@@ -15,16 +15,13 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gioui.org/x/component"
+	"github.com/arl/gioexp/components/property"
 )
 
 type (
 	C = layout.Context
 	D = layout.Dimensions
 )
-
-// Zoomable: experiment at making a widget which content can be zoomed/panned
-// using the mouse wheel, while keeping the point under the cursor immobile
-// (i.e. using the mouse cursor as scale origin).
 
 func main() {
 	ui := NewUI(material.NewTheme(gofont.Collection()))
@@ -44,8 +41,8 @@ func main() {
 type UI struct {
 	Theme *material.Theme
 
-	PropertyList        *PropertyList
-	prop1, prop2, prop3 *Property
+	PropertyList        *property.List
+	prop1, prop2, prop3 *property.Widget
 
 	btn widget.Clickable
 
@@ -53,19 +50,25 @@ type UI struct {
 	Modal component.ModalState
 }
 
+var (
+	aliceBlue = color.NRGBA{R: 240, G: 248, B: 255, A: 255}
+)
+
 func NewUI(theme *material.Theme) *UI {
-	prop1 := NewUIntProperty(123456)
+	prop1 := property.NewUInt(123456)
 	prop1.Label = "Property 1"
+	// TODO(arl): the background color, if not set here, should be given a value
+	// from the property list itself, based on the theme.
 	prop1.Background = aliceBlue
 	prop1.SetEditable(true)
 
-	var p2val UIntValue = 123
-	prop2 := NewTypedProperty("", &p2val)
+	var p2val property.UIntValue = 123
+	prop2 := property.NewString("", &p2val)
 	prop2.Label = "Property 1"
 	prop2.Background = aliceBlue
 	prop2.SetEditable(true)
 
-	prop3 := NewFloat64Property(.2)
+	prop3 := property.NewFloat64(.2)
 	prop3.Label = "Float64"
 	prop3.Background = aliceBlue
 	prop3.SetEditable(true)
@@ -79,7 +82,7 @@ func NewUI(theme *material.Theme) *UI {
 
 	ui.Modal.VisibilityAnimation.Duration = time.Millisecond * 250
 
-	plist := NewPropertyList(&ui.Modal)
+	plist := property.NewList(&ui.Modal)
 	plist.MaxHeight = 300
 	plist.Add(ui.prop1)
 	plist.Add(ui.prop2)

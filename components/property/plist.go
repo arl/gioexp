@@ -1,7 +1,6 @@
-package main
+package property
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"strconv"
@@ -19,13 +18,17 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+type (
+	C = layout.Context
+	D = layout.Dimensions
+)
+
 var (
 	red       = color.NRGBA{R: 255, A: 255}
 	blue      = color.NRGBA{B: 255, A: 255}
 	green     = color.NRGBA{G: 255, A: 255}
 	lightGrey = color.NRGBA{R: 211, G: 211, B: 211, A: 255}
 	darkGrey  = color.NRGBA{R: 169, G: 169, B: 169, A: 255}
-	aliceBlue = color.NRGBA{R: 240, G: 248, B: 255, A: 255}
 )
 
 var (
@@ -34,8 +37,8 @@ var (
 	propertyListBarWidth = unit.Dp(3)
 )
 
-type PropertyList struct {
-	Properties []*Property
+type List struct {
+	Properties []*Widget
 
 	List  layout.List
 	Width unit.Dp
@@ -60,8 +63,8 @@ type PropertyList struct {
 	modal *component.ModalState
 }
 
-func NewPropertyList(modal *component.ModalState) *PropertyList {
-	plist := &PropertyList{
+func NewList(modal *component.ModalState) *List {
+	plist := &List{
 		List: layout.List{
 			Axis: layout.Vertical,
 		},
@@ -70,11 +73,11 @@ func NewPropertyList(modal *component.ModalState) *PropertyList {
 	return plist
 }
 
-func (plist *PropertyList) Add(prop *Property) {
+func (plist *List) Add(prop *Widget) {
 	plist.Properties = append(plist.Properties, prop)
 }
 
-func (plist *PropertyList) Layout(theme *material.Theme, gtx C) D {
+func (plist *List) Layout(theme *material.Theme, gtx C) D {
 	var height int
 	if plist.MaxHeight != 0 {
 		height = int(plist.MaxHeight)
@@ -167,7 +170,7 @@ func clamp[T constraints.Ordered](mn, val, mx T) T {
 	return val
 }
 
-func (plist *PropertyList) layoutProperty(prop *Property, theme *material.Theme, modal *component.ModalState, gtx C) D {
+func (plist *List) layoutProperty(prop *Widget, theme *material.Theme, modal *component.ModalState, gtx C) D {
 	size := gtx.Constraints.Max
 	gtx.Constraints = layout.Exact(size)
 
@@ -201,17 +204,6 @@ func (plist *PropertyList) layoutProperty(prop *Property, theme *material.Theme,
 			off.Pop()
 		}
 
-		// Test, draw modal
-		modal.Show(gtx.Now, func(gtx C) D {
-			// Draw a red rectangle
-			size := gtx.Constraints.Max
-			rect := clip.Rect{Min: image.Pt(100, 100), Max: size}.Op()
-			paint.FillShape(gtx.Ops, red, rect)
-
-			fmt.Println("in modal, max", gtx.Constraints.Max)
-			return D{Size: size}
-		})
-
 		dim = layout.Dimensions{Size: gtx.Constraints.Max}
 	}
 
@@ -227,7 +219,7 @@ type Value interface {
 	Set(string) error
 }
 
-type Property struct {
+type Widget struct {
 	Label string
 
 	editable bool
@@ -236,40 +228,40 @@ type Property struct {
 	Background color.NRGBA
 }
 
-func NewFloat64Property(initial float64) *Property {
-	return NewTypedProperty("0123456789.eE+-", (*Float64Value)(&initial))
+func NewFloat64(initial float64) *Widget {
+	return NewString("0123456789.eE+-", (*Float64Value)(&initial))
 }
 
-func NewUIntProperty(initial uint) *Property {
-	return NewTypedProperty("0123456789", (*UIntValue)(&initial))
+func NewUInt(initial uint) *Widget {
+	return NewString("0123456789", (*UIntValue)(&initial))
 }
 
 // TODO(arl) comment
 //
-// NewTypedProperty...
+// NewString...
 //
 // filter is the list of characters allowed in the Editor. If Filter is empty,
 // all characters are allowed.
-func NewTypedProperty(filter string, initial Value) *Property {
-	p := &Property{
+func NewString(filter string, initial Value) *Widget {
+	p := &Widget{
 		w: newTypedValueWidget(initial, blue),
 	}
 	return p
 }
 
-func (prop *Property) LayoutValue(theme *material.Theme, gtx C) D {
+func (prop *Widget) LayoutValue(theme *material.Theme, gtx C) D {
 	return prop.w.LayoutValue(theme, prop.editable, gtx)
 }
 
-func (prop *Property) SetEditable(editable bool) {
+func (prop *Widget) SetEditable(editable bool) {
 	prop.editable = editable
 }
 
-func (prop *Property) Editable() bool {
+func (prop *Widget) Editable() bool {
 	return prop.editable
 }
 
-func (prop *Property) LayoutLabel(theme *material.Theme, gtx C) D {
+func (prop *Widget) LayoutLabel(theme *material.Theme, gtx C) D {
 	// Background color.
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
 	paint.FillShape(gtx.Ops, theme.Bg, rect)
