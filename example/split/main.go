@@ -15,7 +15,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/widget/material"
 
-	"github.com/arl/gioexp/components/split"
+	"github.com/arl/gioexp/component/split"
 )
 
 type (

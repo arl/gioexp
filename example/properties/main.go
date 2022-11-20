@@ -15,7 +15,8 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gioui.org/x/component"
-	"github.com/arl/gioexp/components/property"
+
+	"github.com/arl/gioexp/component/property"
 )
 
 type (

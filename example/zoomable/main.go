@@ -16,7 +16,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/widget/material"
 
-	"github.com/arl/gioexp/components/zoomable"
+	"github.com/arl/gioexp/component/zoomable"
 )
 
 type (
