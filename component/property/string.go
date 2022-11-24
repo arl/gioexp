@@ -97,34 +97,34 @@ func NewUInt(initial uint) *Property {
 	return NewString("0123456789", (*UIntValue)(&initial))
 }
 
-type UIntValue uint
+type UInt uint
 
-func (i *UIntValue) Set(s string) error {
+func (i *UInt) Set(s string) error {
 	v, err := strconv.ParseUint(s, 0, strconv.IntSize)
 	if err != nil {
 		return err
 	}
-	*i = UIntValue(v)
+	*i = UInt(v)
 	return nil
 }
 
-func (i *UIntValue) Get() any       { return uint(*i) }
-func (i *UIntValue) String() string { return strconv.FormatUint(uint64(*i), 10) }
+func (i *UInt) Get() any       { return uint(*i) }
+func (i *UInt) String() string { return strconv.FormatUint(uint64(*i), 10) }
 
 func NewFloat64(initial float64) *Property {
-	return NewString("0123456789.eE+-", (*Float64Value)(&initial))
+	return NewText("0123456789.eE+-", (*Float64)(&initial))
 }
 
-type Float64Value float64
+type Float64 float64
 
-func (i *Float64Value) Set(s string) error {
+func (i *Float64) Set(s string) error {
 	v, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return err
 	}
-	*i = Float64Value(v)
+	*i = Float64(v)
 	return nil
 }
 
-func (i *Float64Value) Get() any       { return uint(*i) }
-func (i *Float64Value) String() string { return strconv.FormatFloat(float64(*i), 'g', 3, 64) }
+func (i *Float64) Get() any       { return uint(*i) }
+func (i *Float64) String() string { return strconv.FormatFloat(float64(*i), 'g', 3, 64) }
