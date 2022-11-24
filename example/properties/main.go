@@ -58,20 +58,15 @@ var (
 func NewUI(theme *material.Theme) *UI {
 	prop1 := property.NewUInt(123456)
 	prop1.Label = "Property 1"
-	// TODO(arl): the background color, if not set here, should be given a value
-	// from the property list itself, based on the theme.
-	prop1.Background = aliceBlue
 	prop1.Editable = true
 
 	var p2val property.UIntValue = 123
 	prop2 := property.NewString("", &p2val)
 	prop2.Label = "Property 1"
-	prop2.Background = aliceBlue
 	prop2.Editable = true
 
 	prop3 := property.NewFloat64(.2)
 	prop3.Label = "Float64"
-	prop3.Background = aliceBlue
 	prop3.Editable = true
 
 	ui := &UI{

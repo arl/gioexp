@@ -13,21 +13,19 @@ import (
 	"gioui.org/widget/material"
 )
 
-// NewString returns a Property that displays a string representation and is
-// edited via a string editor. Filter is the list of allowed runes in the
-// editor; if it is empty all runes are allowed..
+// NewString returns a Property that displays a string representation of a
+// flag.Value and is edited via a string editor. Filter is the list of allowed
+// runes in the editor; "" means all runes are allowed.
 func NewString(filter string, initial flag.Value) *Property {
-	p := &Property{
+	return &Property{
 		W: NewStringValue(initial),
 	}
-	return p
 }
 
 type StringValue struct {
 	hasFocus bool
 	editor   widget.Editor
-
-	val flag.Value
+	val      flag.Value
 }
 
 func NewStringValue(initial flag.Value) *StringValue {
@@ -42,8 +40,7 @@ func NewStringValue(initial flag.Value) *StringValue {
 func (sv *StringValue) SetValue(val any) error {
 	sv.val = val.(flag.Value)
 	sv.editor.SetText(sv.val.String())
-	// Converting a non-nil Value to string can't fail.
-	return nil
+	return nil // Converting a non-nil Value to string can't fail.
 }
 
 // TODO(arl) add unit tests, check that Value returns the currently displayed value.
@@ -75,26 +72,24 @@ func (sv *StringValue) Layout(theme *material.Theme, editable bool, gtx C) D {
 	// Draw value as an editor or a label depending on whether the property is editable or not.
 	inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
 	if editable {
+		ed := material.Editor(theme, &sv.editor, "")
+		ed.TextSize = unit.Sp(14)
+		ed.Font.Weight = 50
+
 		return FocusBorder(theme, sv.hasFocus).Layout(gtx, func(gtx C) D {
-			return inset.Layout(gtx, func(gtx C) D {
-				label := material.Editor(theme, &sv.editor, "")
-				label.TextSize = unit.Sp(14)
-				label.Font.Weight = 50
-				return label.Layout(gtx)
-			})
+			return inset.Layout(gtx, ed.Layout)
 		})
 	}
 
+	label := material.Label(theme, unit.Sp(14), sv.val.String())
+	label.MaxLines = 1
+	label.TextSize = unit.Sp(14)
+	label.Font.Weight = 50
+	label.Alignment = text.Start
+	label.Color = theme.Fg
+
 	return FocusBorder(theme, sv.hasFocus).Layout(gtx, func(gtx C) D {
-		return inset.Layout(gtx, func(gtx C) D {
-			label := material.Label(theme, unit.Sp(14), sv.val.String())
-			label.MaxLines = 1
-			label.TextSize = unit.Sp(14)
-			label.Font.Weight = 50
-			label.Alignment = text.Start
-			label.Color = theme.Fg
-			return label.Layout(gtx)
-		})
+		return inset.Layout(gtx, label.Layout)
 	})
 }
 
@@ -113,8 +108,7 @@ func (i *UIntValue) Set(s string) error {
 	return nil
 }
 
-func (i *UIntValue) Get() any { return uint(*i) }
-
+func (i *UIntValue) Get() any       { return uint(*i) }
 func (i *UIntValue) String() string { return strconv.FormatUint(uint64(*i), 10) }
 
 func NewFloat64(initial float64) *Property {
@@ -132,6 +126,5 @@ func (i *Float64Value) Set(s string) error {
 	return nil
 }
 
-func (i *Float64Value) Get() any { return uint(*i) }
-
+func (i *Float64Value) Get() any       { return uint(*i) }
 func (i *Float64Value) String() string { return strconv.FormatFloat(float64(*i), 'g', 3, 64) }

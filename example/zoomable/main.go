@@ -24,8 +24,6 @@ type (
 	D = layout.Dimensions
 )
 
-var red = color.NRGBA{R: 200, A: 255}
-
 // Zoomable: experiment at making a widget which content can be zoomed/panned
 // using the mouse wheel, while keeping the point under the cursor immobile
 // (i.e. using the mouse cursor as scale origin).
@@ -72,6 +70,8 @@ func (ui *UI) Run(w *app.Window) error {
 
 	return nil
 }
+
+var red = color.NRGBA{R: 200, A: 255}
 
 func (ui *UI) Layout(gtx C) D {
 	return ui.Zoomable.Layout(gtx, func(gtx C) D {

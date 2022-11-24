@@ -38,10 +38,10 @@ func (s *Split) Layout(gtx layout.Context, left, right layout.Widget) layout.Dim
 	}
 
 	proportion := (s.Ratio + 1) / 2
-	leftsize := int(proportion*float32(gtx.Constraints.Max.X) - float32(bar))
+	lsize := int(proportion*float32(gtx.Constraints.Max.X) - float32(bar))
 
-	rightoffset := leftsize + bar
-	rightsize := gtx.Constraints.Max.X - rightoffset
+	roff := lsize + bar
+	rsize := gtx.Constraints.Max.X - roff
 
 	{ // handle input
 		for _, ev := range gtx.Events(s) {
@@ -78,25 +78,25 @@ func (s *Split) Layout(gtx layout.Context, left, right layout.Widget) layout.Dim
 		}
 
 		// register for input
-		barRect := image.Rect(leftsize, 0, rightoffset, gtx.Constraints.Max.X)
-		area := clip.Rect(barRect).Push(gtx.Ops)
-		pointer.InputOp{Tag: s,
+		barRect := image.Rect(lsize, 0, roff, gtx.Constraints.Max.X)
+		clip.Rect(barRect).Push(gtx.Ops).Pop()
+		pointer.InputOp{
+			Tag:   s,
 			Types: pointer.Press | pointer.Drag | pointer.Release,
 			Grab:  s.drag,
 		}.Add(gtx.Ops)
-		area.Pop()
 	}
 
 	{
 		gtx := gtx
-		gtx.Constraints = layout.Exact(image.Pt(leftsize, gtx.Constraints.Max.Y))
+		gtx.Constraints = layout.Exact(image.Pt(lsize, gtx.Constraints.Max.Y))
 		left(gtx)
 	}
 
 	{
-		off := op.Offset(image.Pt(rightoffset, 0)).Push(gtx.Ops)
+		off := op.Offset(image.Pt(roff, 0)).Push(gtx.Ops)
 		gtx := gtx
-		gtx.Constraints = layout.Exact(image.Pt(rightsize, gtx.Constraints.Max.Y))
+		gtx.Constraints = layout.Exact(image.Pt(rsize, gtx.Constraints.Max.Y))
 		right(gtx)
 		off.Pop()
 	}

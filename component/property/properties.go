@@ -1,8 +1,6 @@
 package property
 
 import (
-	"image/color"
-
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
@@ -28,20 +26,17 @@ type ValueWidget interface {
 	// TODO(arl) do we really need to return an error here?
 	//
 	// TODO(arl) can we have a type-safe API with generics if we manage to avoid
-	// the generic type to leak in to property.List?
+	// the generic type to 'leak' in to property.List?
 	SetValue(any) error
 }
 
-// Property represents a single property of a property list. It is made of a
-// label and a value, the latter is typically editable. User interaction to edit
-// the value is delegated to a ValueWidget, with which all kinds of interactions
-// are possible, from a 'simple' string editor to a more complex interactions
-// such as a list box or color picker, for example.
+// Property holds and displays and allows to edit a property, a single element
+// in a List. It is made of a label (constant) and a value. User interaction to
+// edit the value is delegated to W, a ValueWidget.
 type Property struct {
-	Label      string
-	Background color.NRGBA
-	W          ValueWidget
-	Editable   bool
+	Label    string
+	W        ValueWidget
+	Editable bool
 }
 
 func (prop *Property) Value() any {
@@ -61,13 +56,12 @@ func (prop *Property) LayoutLabel(theme *material.Theme, gtx C) D {
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
 	paint.FillShape(gtx.Ops, theme.Bg, rect)
 
+	label := material.Label(theme, unit.Sp(14), prop.Label)
+	label.MaxLines = 1
+	label.TextSize = unit.Sp(14)
+	label.Font.Weight = 50
+	label.Alignment = text.Start
+
 	inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
-	return inset.Layout(gtx, func(gtx C) D {
-		label := material.Label(theme, unit.Sp(14), prop.Label)
-		label.MaxLines = 1
-		label.TextSize = unit.Sp(14)
-		label.Font.Weight = 50
-		label.Alignment = text.Start
-		return label.Layout(gtx)
-	})
+	return inset.Layout(gtx, label.Layout)
 }
