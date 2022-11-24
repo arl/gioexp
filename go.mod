@@ -3,9 +3,9 @@ module github.com/arl/gioexp
 go 1.19
 
 require (
-	gioui.org v0.0.0-20221011192757-dead6e007f04
-	gioui.org/x v0.0.0-20221103142138-d48590498bfc
-	golang.org/x/exp v0.0.0-20221028150844-83b7d23a625f
+	gioui.org v0.0.0-20221122135904-dee53b364560
+	gioui.org/x v0.0.0-20221121204253-9da08d942944
+	golang.org/x/exp v0.0.0-20221114191408-850992195362
 )
 
 require (
