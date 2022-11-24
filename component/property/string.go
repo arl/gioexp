@@ -2,7 +2,6 @@ package property
 
 import (
 	"flag"
-	"image/color"
 	"strconv"
 
 	"gioui.org/layout"
@@ -19,7 +18,7 @@ import (
 // editor; if it is empty all runes are allowed..
 func NewString(filter string, initial flag.Value) *Property {
 	p := &Property{
-		W: NewStringValue(initial, blue),
+		W: NewStringValue(initial),
 	}
 	return p
 }
@@ -28,14 +27,12 @@ type StringValue struct {
 	hasFocus bool
 	editor   widget.Editor
 
-	bgcolor color.NRGBA
-	val     flag.Value
+	val flag.Value
 }
 
-func NewStringValue(initial flag.Value, bgcolor color.NRGBA) *StringValue {
+func NewStringValue(initial flag.Value) *StringValue {
 	sv := &StringValue{
-		bgcolor: bgcolor,
-		val:     initial,
+		val: initial,
 	}
 	sv.SetValue(initial)
 	return sv
@@ -95,7 +92,7 @@ func (sv *StringValue) Layout(theme *material.Theme, editable bool, gtx C) D {
 			label.TextSize = unit.Sp(14)
 			label.Font.Weight = 50
 			label.Alignment = text.Start
-			label.Color = darkGrey
+			label.Color = theme.Fg
 			return label.Layout(gtx)
 		})
 	})

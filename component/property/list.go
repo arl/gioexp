@@ -2,7 +2,6 @@ package property
 
 import (
 	"image"
-	"image/color"
 
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
@@ -19,14 +18,6 @@ import (
 type (
 	C = layout.Context
 	D = layout.Dimensions
-)
-
-var (
-	red       = color.NRGBA{R: 255, A: 255}
-	blue      = color.NRGBA{B: 255, A: 255}
-	green     = color.NRGBA{G: 255, A: 255}
-	lightGrey = color.NRGBA{R: 211, G: 211, B: 211, A: 255}
-	darkGrey  = color.NRGBA{R: 169, G: 169, B: 169, A: 255}
 )
 
 var ( // TODO(arl) document and export?
@@ -99,7 +90,7 @@ func (plist *List) Layout(theme *material.Theme, gtx C) D {
 	rightoffset := leftsize + bar
 
 	dim := widget.Border{
-		Color:        darkGrey,
+		Color:        theme.Fg,
 		CornerRadius: unit.Dp(2),
 		Width:        unit.Dp(1),
 	}.Layout(gtx, func(gtx C) D {
@@ -194,7 +185,7 @@ func (plist *List) layoutProperty(prop *Property, theme *material.Theme, modal *
 			// Draw split bar.
 			gtx := gtx
 			rect := clip.Rect{Min: image.Pt(leftsize, 0), Max: image.Pt(rightoffset, gtx.Constraints.Max.Y)}.Op()
-			paint.FillShape(gtx.Ops, darkGrey, rect)
+			paint.FillShape(gtx.Ops, theme.Fg, rect)
 		}
 		{
 			// Draw value.
