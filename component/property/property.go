@@ -45,8 +45,8 @@ func (prop *Property) LayoutName(theme *material.Theme, gtx C) D {
 	return inset.Layout(gtx, label.Layout)
 }
 
-// A ValueWidget allows to get, set and lay out the value of a Property, as well
-// as handle user interaction for value edition..
+// ValueWidget holds and displays the value of a Property. It also handles user
+// interaction and display while during the edition of the value.
 type ValueWidget interface {
 
 	// Layout lays out the property value with respect to the given theme and
