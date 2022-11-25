@@ -57,16 +57,16 @@ var (
 
 func NewUI(theme *material.Theme) *UI {
 	prop1 := property.NewUInt(123456)
-	prop1.Label = "Property 1"
+	prop1.Name = "Property 1"
 	prop1.Editable = true
 
 	prop2 := property.NewString("", &p2val)
 	var p2val property.UInt = 123
-	prop2.Label = "Property 1"
+	prop2.Name = "Property 1"
 	prop2.Editable = true
 
 	prop3 := property.NewFloat64(.2)
-	prop3.Label = "Float64"
+	prop3.Name = "Float64"
 	prop3.Editable = true
 
 	ui := &UI{

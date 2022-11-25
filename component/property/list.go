@@ -174,21 +174,21 @@ func (plist *List) layoutProperty(idx int, theme *material.Theme, modal *compone
 		rsize := gtx.Constraints.Max.X - roff
 
 		{
-			// Draw label.
+			// Draw property name.
 			gtx := gtx
 			size := image.Pt(lsize, gtx.Constraints.Max.Y)
 			gtx.Constraints = layout.Exact(size)
-			plist.props[idx].LayoutLabel(theme, gtx)
+			plist.props[idx].LayoutName(theme, gtx)
 		}
 		{
-			// Draw split bar.
+			// Draw property split bar.
 			gtx := gtx
 			max := image.Pt(roff, gtx.Constraints.Max.Y)
 			rect := clip.Rect{Min: image.Pt(lsize, 0), Max: max}.Op()
 			paint.FillShape(gtx.Ops, theme.ContrastBg, rect)
 		}
 		{
-			// Draw value.
+			// Draw property value.
 			gtx := gtx
 			off := op.Offset(image.Pt(roff, 0)).Push(gtx.Ops)
 			size := image.Pt(rsize, gtx.Constraints.Max.Y)

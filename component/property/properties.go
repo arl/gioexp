@@ -9,6 +9,42 @@ import (
 	"gioui.org/widget/material"
 )
 
+// A Property is a generic widget handling a single item in a List. Its name,
+// drawn with as a material.Label, is typically constant. Layout and user
+// interaction to edit the property value are defined and delegated to a
+// ValueWidget.
+type Property struct {
+	Name     string
+	W        ValueWidget
+	Editable bool
+}
+
+func (prop *Property) Value() any {
+	return prop.W.Value()
+}
+
+func (prop *Property) SetValue(val any) {
+	prop.W.SetValue(val)
+}
+
+func (prop *Property) LayoutValue(theme *material.Theme, gtx C) D {
+	return prop.W.Layout(theme, prop.Editable, gtx)
+}
+
+func (prop *Property) LayoutName(theme *material.Theme, gtx C) D {
+	// Background color.
+	paint.FillShape(gtx.Ops, theme.Bg, clip.Rect{Max: gtx.Constraints.Max}.Op())
+
+	label := material.Label(theme, unit.Sp(14), prop.Name)
+	label.MaxLines = 1
+	label.TextSize = unit.Sp(14)
+	label.Font.Weight = 50
+	label.Alignment = text.Start
+
+	inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
+	return inset.Layout(gtx, label.Layout)
+}
+
 // A ValueWidget allows to get, set and lay out the value of a Property, as well
 // as handle user interaction for value edition..
 type ValueWidget interface {
@@ -28,40 +64,4 @@ type ValueWidget interface {
 	// TODO(arl) can we have a type-safe API with generics if we manage to avoid
 	// the generic type to 'leak' in to property.List?
 	SetValue(any) error
-}
-
-// Property holds and displays and allows to edit a property, a single element
-// in a List. It is made of a label (constant) and a value. User interaction to
-// edit the value is delegated to W, a ValueWidget.
-type Property struct {
-	Label    string
-	W        ValueWidget
-	Editable bool
-}
-
-func (prop *Property) Value() any {
-	return prop.W.Value()
-}
-
-func (prop *Property) SetValue(val any) {
-	prop.W.SetValue(val)
-}
-
-func (prop *Property) LayoutValue(theme *material.Theme, gtx C) D {
-	return prop.W.Layout(theme, prop.Editable, gtx)
-}
-
-func (prop *Property) LayoutLabel(theme *material.Theme, gtx C) D {
-	// Background color.
-	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
-	paint.FillShape(gtx.Ops, theme.Bg, rect)
-
-	label := material.Label(theme, unit.Sp(14), prop.Label)
-	label.MaxLines = 1
-	label.TextSize = unit.Sp(14)
-	label.Font.Weight = 50
-	label.Alignment = text.Start
-
-	inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
-	return inset.Layout(gtx, label.Layout)
 }
