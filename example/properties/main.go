@@ -42,8 +42,9 @@ func main() {
 type UI struct {
 	Theme *material.Theme
 
-	PropertyList        *property.List
-	prop1, prop2, prop3 *property.Property
+	PropertyList *property.List
+	// TODO(arl) should we keep the properties? or just the pointer to the values?
+	prop1, prop2, prop3, prop4 *property.Property
 
 	btn widget.Clickable
 
@@ -55,13 +56,16 @@ var (
 	aliceBlue = color.NRGBA{R: 240, G: 248, B: 255, A: 255}
 )
 
+var p2 *uint
+
 func NewUI(theme *material.Theme) *UI {
 	prop1 := property.NewUInt(123456)
 	prop1.Name = "Property 1"
 	prop1.Editable = true
 
-	prop2 := property.NewString("", &p2val)
-	var p2val property.UInt = 123
+	var p2val uint = 123
+	p2 = &p2val
+	prop2 := property.NewText((*property.UIntValue)(&p2val), "")
 	prop2.Name = "Property 1"
 	prop2.Editable = true
 
@@ -69,21 +73,26 @@ func NewUI(theme *material.Theme) *UI {
 	prop3.Name = "Float64"
 	prop3.Editable = true
 
+	prop4 := property.NewString("Hello Property")
+	prop4.Name = "String"
+	prop4.Editable = true
+
 	ui := &UI{
 		Theme: theme,
 		prop1: prop1,
 		prop2: prop2,
 		prop3: prop3,
+		prop4: prop4,
 	}
 
 	ui.Modal.VisibilityAnimation.Duration = time.Millisecond * 250
 
 	plist := property.NewList(&ui.Modal)
 	plist.MaxHeight = 300
-	plist.Add(ui.prop1)
-	plist.Add(ui.prop2)
-	plist.Add(ui.prop3)
-
+	plist.Add(prop1)
+	plist.Add(prop2)
+	plist.Add(prop3)
+	plist.Add(prop4)
 	ui.PropertyList = plist
 
 	return ui

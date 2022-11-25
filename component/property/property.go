@@ -14,21 +14,14 @@ import (
 // interaction to edit the property value are defined and delegated to a
 // ValueWidget.
 type Property struct {
+	ValueWidget
+
 	Name     string
-	W        ValueWidget
 	Editable bool
 }
 
-func (prop *Property) Value() any {
-	return prop.W.Value()
-}
-
-func (prop *Property) SetValue(val any) {
-	prop.W.SetValue(val)
-}
-
 func (prop *Property) LayoutValue(theme *material.Theme, gtx C) D {
-	return prop.W.Layout(theme, prop.Editable, gtx)
+	return prop.Layout(theme, prop.Editable, gtx)
 }
 
 func (prop *Property) LayoutName(theme *material.Theme, gtx C) D {
@@ -45,15 +38,17 @@ func (prop *Property) LayoutName(theme *material.Theme, gtx C) D {
 	return inset.Layout(gtx, label.Layout)
 }
 
-// ValueWidget holds and displays the value of a Property. It also handles user
-// interaction and display while during the edition of the value.
+// ValueWidget is the interface to hold, display and edit Property values.
+//
+// Well-behaved implementations guarantee Value always returns a value of the
+// expected type. Also, implementations may panic if Value is called with an
+// unexpected type.
 type ValueWidget interface {
-
-	// Layout lays out the property value with respect to the given theme and
-	// the boolean indicating whether the property is editable.
+	// Layout lays out the property value using the given theme and handles user
+	// interaction if the value is currently editable.
 	Layout(theme *material.Theme, editable bool, gtx C) D
 
-	// Value returns property value.
+	// Value returns the property value.
 	Value() any
 
 	// SetValue defines the property value. Panics if the type of any is not of

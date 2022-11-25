@@ -1,7 +1,6 @@
 package property
 
 import (
-	"flag"
 	"strconv"
 
 	"gioui.org/layout"
@@ -13,42 +12,37 @@ import (
 	"gioui.org/widget/material"
 )
 
-// NewString returns a Property that displays a string representation of a
-// flag.Value and is edited via a string editor. Filter is the list of allowed
-// runes in the editor; "" means all runes are allowed.
-func NewString(filter string, initial flag.Value) *Property {
-	return &Property{
-		W: NewStringValue(initial),
-	}
+// TextValue is the interface implemented by objects that can converted
+// themselves to and from string.
+type TextValue interface {
+	String() string
+	Set(string) error
 }
 
-type StringValue struct {
+// TextWidget is a widget that holds, displays and edits a property shown
+// converted to its textual representation. It's edited using a standard gio
+// editor or laid out as a label when not editable.
+type TextWidget struct {
 	hasFocus bool
 	editor   widget.Editor
-	val      flag.Value
-}
-
-func NewStringValue(initial flag.Value) *StringValue {
-	sv := &StringValue{
-		val: initial,
-	}
-	sv.SetValue(initial)
-	return sv
+	val      TextValue
 }
 
 // TODO(arl) add unit tests, check that SetValue sets the value to display.
-func (sv *StringValue) SetValue(val any) error {
-	sv.val = val.(flag.Value)
+func (sv *TextWidget) SetValue(val any) error {
+	sv.val = val.(TextValue)
 	sv.editor.SetText(sv.val.String())
 	return nil // Converting a non-nil Value to string can't fail.
 }
 
 // TODO(arl) add unit tests, check that Value returns the currently displayed value.
-func (sv *StringValue) Value() any {
+func (sv *TextWidget) Value() any {
 	return sv.val
 }
 
-func (sv *StringValue) Layout(theme *material.Theme, editable bool, gtx C) D {
+// TODO(arl) show ellipsis if the text can't be shown entirely
+
+func (sv *TextWidget) Layout(theme *material.Theme, editable bool, gtx C) D {
 	// Draw background color.
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
 	paint.FillShape(gtx.Ops, theme.Bg, rect)
@@ -93,38 +87,61 @@ func (sv *StringValue) Layout(theme *material.Theme, editable bool, gtx C) D {
 	})
 }
 
-func NewUInt(initial uint) *Property {
-	return NewString("0123456789", (*UIntValue)(&initial))
+// NewText creates a Property with v as initial value and the type of value as
+// underlying type. filter is the list of characters allowed in the Editor. If
+// empty all characters are allowed.
+func NewText(v TextValue, filter string) *Property {
+	w := &TextWidget{val: v}
+	w.editor.Filter = filter
+	w.SetValue(v)
+	return &Property{ValueWidget: w}
 }
 
-type UInt uint
+func NewString(v string) *Property {
+	return NewText((*StringValue)(&v), "")
+}
 
-func (i *UInt) Set(s string) error {
+type StringValue string
+
+func (s *StringValue) Set(str string) error {
+	*s = (StringValue)(str)
+	return nil
+}
+func (s *StringValue) Get() any       { return *s }
+func (s *StringValue) String() string { return string(*s) }
+
+func NewUInt(v uint) *Property {
+	return NewText((*UIntValue)(&v), "0123456789")
+}
+
+type UIntValue uint
+
+func (i *UIntValue) Set(s string) error {
 	v, err := strconv.ParseUint(s, 0, strconv.IntSize)
 	if err != nil {
 		return err
 	}
-	*i = UInt(v)
+	*i = UIntValue(v)
 	return nil
 }
 
-func (i *UInt) Get() any       { return uint(*i) }
-func (i *UInt) String() string { return strconv.FormatUint(uint64(*i), 10) }
+func (i *UIntValue) Get() any       { return uint(*i) }
+func (i *UIntValue) String() string { return strconv.FormatUint(uint64(*i), 10) }
 
-func NewFloat64(initial float64) *Property {
-	return NewText("0123456789.eE+-", (*Float64)(&initial))
+func NewFloat64(v float64) *Property {
+	return NewText((*Float64Value)(&v), "0123456789.eE+-")
 }
 
-type Float64 float64
+type Float64Value float64
 
-func (i *Float64) Set(s string) error {
+func (i *Float64Value) Set(s string) error {
 	v, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return err
 	}
-	*i = Float64(v)
+	*i = Float64Value(v)
 	return nil
 }
 
-func (i *Float64) Get() any       { return uint(*i) }
-func (i *Float64) String() string { return strconv.FormatFloat(float64(*i), 'g', 3, 64) }
+func (i *Float64Value) Get() any       { return uint(*i) }
+func (i *Float64Value) String() string { return strconv.FormatFloat(float64(*i), 'g', 3, 64) }
