@@ -1,147 +1,248 @@
 package property
 
 import (
+	"image/color"
 	"strconv"
 
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/text"
-	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
 
-// TextValue is the interface implemented by objects that can converted
+var lightGrey = rgb(0xd3d3d3)
+
+func rgb(c uint32) color.NRGBA {
+	return argb(0xff000000 | c)
+}
+
+func argb(c uint32) color.NRGBA {
+	return color.NRGBA{A: uint8(c >> 24), R: uint8(c >> 16), G: uint8(c >> 8), B: uint8(c)}
+}
+
+// Stringer is the interface implemented by objects that can converted
 // themselves to and from string.
-type TextValue interface {
+type Stringer interface {
 	String() string
 	Set(string) error
 }
 
-// TextWidget is a widget that holds, displays and edits a property shown
-// converted to its textual representation. It's edited using a standard gio
-// editor or laid out as a label when not editable.
-type TextWidget struct {
-	hasFocus bool
+// Text is a widget that holds, displays and edits a property shown converted to
+// its textual representation. It's edited using a standard gio editor or laid
+// out as a label when not editable.
+type Text struct {
+	val      Stringer
 	editor   widget.Editor
-	val      TextValue
+	Editable bool
+	hasFocus bool
 }
 
-// TODO(arl) add unit tests, check that SetValue sets the value to display.
-func (sv *TextWidget) SetValue(val any) error {
-	sv.val = val.(TextValue)
-	sv.editor.SetText(sv.val.String())
-	return nil // Converting a non-nil Value to string can't fail.
+// NewText creates a Text property and assigns it a value. filter is the list of
+// characters allowed in the Editor. If empty all characters are allowed.
+func NewText(val Stringer, filter string) *Text {
+	t := &Text{
+		Editable: true,
+		editor: widget.Editor{
+			Filter:     filter,
+			SingleLine: true,
+		},
+	}
+	t.setValue(val)
+	return t
 }
 
-// TODO(arl) add unit tests, check that Value returns the currently displayed value.
-func (sv *TextWidget) Value() any {
-	return sv.val
+func (t *Text) setValue(val Stringer) {
+	t.val = val
+	t.editor.SetText(t.val.String())
 }
 
-// TODO(arl) show ellipsis if the text can't be shown entirely
+func (t *Text) value() Stringer {
+	return t.val
+}
 
-func (sv *TextWidget) Layout(theme *material.Theme, editable bool, gtx C) D {
+func (t *Text) Layout(th *material.Theme, _, gtx C) D {
 	// Draw background color.
 	rect := clip.Rect{Max: gtx.Constraints.Max}.Op()
-	paint.FillShape(gtx.Ops, theme.Bg, rect)
+	bgcol := th.Bg
+	if !t.Editable {
+		bgcol = lightGrey
+	}
+	paint.FillShape(gtx.Ops, bgcol, rect)
 
-	hadFocus := sv.hasFocus
-	sv.hasFocus = sv.editor.Focused()
-	if hadFocus && !sv.hasFocus {
+	hadFocus := t.hasFocus
+	t.hasFocus = t.editor.Focused()
+	if hadFocus && !t.hasFocus {
 		// We've just lost focus, it's the moment to check the
 		// validity of the typed string.
-		if err := sv.val.Set(sv.editor.Text()); err != nil {
+		if err := t.val.Set(t.editor.Text()); err != nil {
 			// TODO(arl) should we give the user a visual feedback in case of
 			// validation error? maybe animate a red flash. or set a red
 			// background that would quickly fade into the normal background
 			// color
 
 			// Revert the property text to the previous valid value.
-			sv.SetValue(sv.val)
+			t.setValue(t.val)
 		}
 	}
 
-	// Draw value as an editor or a label depending on whether the property is editable or not.
+	// Draw value as an editor or a label depending on whether the property is
+	// editable or not.
 	inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
-	if editable {
-		ed := material.Editor(theme, &sv.editor, "")
-		ed.TextSize = unit.Sp(14)
-		ed.Font.Weight = 50
 
-		return FocusBorder(theme, sv.hasFocus).Layout(gtx, func(gtx C) D {
-			return inset.Layout(gtx, ed.Layout)
+	if !t.Editable {
+		label := material.Label(th, th.TextSize, t.val.String())
+		label.MaxLines = 1
+		label.TextSize = th.TextSize
+		label.Alignment = text.Start
+		label.Color = th.Fg
+
+		return FocusBorder(th, t.hasFocus).Layout(gtx, func(gtx C) D {
+			return inset.Layout(gtx, label.Layout)
 		})
 	}
 
-	label := material.Label(theme, unit.Sp(14), sv.val.String())
-	label.MaxLines = 1
-	label.TextSize = unit.Sp(14)
-	label.Font.Weight = 50
-	label.Alignment = text.Start
-	label.Color = theme.Fg
+	ed := material.Editor(th, &t.editor, "")
+	ed.TextSize = th.TextSize
 
-	return FocusBorder(theme, sv.hasFocus).Layout(gtx, func(gtx C) D {
-		return inset.Layout(gtx, label.Layout)
+	return FocusBorder(th, t.hasFocus).Layout(gtx, func(gtx C) D {
+		return inset.Layout(gtx, ed.Layout)
 	})
 }
 
-// NewText creates a Property with v as initial value and the type of value as
-// underlying type. filter is the list of characters allowed in the Editor. If
-// empty all characters are allowed.
-func NewText(v TextValue, filter string) *Property {
-	w := &TextWidget{val: v}
-	w.editor.Filter = filter
-	w.SetValue(v)
-	return &Property{ValueWidget: w}
+//
+// UInt
+//
+
+type Uint struct {
+	*Text
 }
 
-func NewString(v string) *Property {
-	return NewText((*StringValue)(&v), "")
+func NewUInt(val uint) *Uint {
+	return &Uint{Text: NewText((*uintval)(&val), "0123456789")}
 }
 
-type StringValue string
-
-func (s *StringValue) Set(str string) error {
-	*s = (StringValue)(str)
-	return nil
-}
-func (s *StringValue) Get() any       { return *s }
-func (s *StringValue) String() string { return string(*s) }
-
-func NewUInt(v uint) *Property {
-	return NewText((*UIntValue)(&v), "0123456789")
+func (i *Uint) Value() uint {
+	return uint(*(i.value().(*uintval)))
 }
 
-type UIntValue uint
+func (i *Uint) SetValue(val uint) {
+	i.setValue((*uintval)(&val))
+}
 
-func (i *UIntValue) Set(s string) error {
+type uintval uint
+
+func (i *uintval) Set(s string) error {
 	v, err := strconv.ParseUint(s, 0, strconv.IntSize)
 	if err != nil {
 		return err
 	}
-	*i = UIntValue(v)
+	*i = uintval(v)
 	return nil
 }
 
-func (i *UIntValue) Get() any       { return uint(*i) }
-func (i *UIntValue) String() string { return strconv.FormatUint(uint64(*i), 10) }
+func (i *uintval) Get() any       { return uint(*i) }
+func (i *uintval) String() string { return strconv.FormatUint(uint64(*i), 10) }
 
-func NewFloat64(v float64) *Property {
-	return NewText((*Float64Value)(&v), "0123456789.eE+-")
+//
+// Int
+//
+
+type Int struct {
+	*Text
 }
 
-type Float64Value float64
+func NewInt(val int) *Int {
+	return &Int{Text: NewText((*intval)(&val), "-+0123456789")}
+}
 
-func (i *Float64Value) Set(s string) error {
+func (i *Int) Value() int {
+	return int(*(i.value().(*intval)))
+}
+
+func (i *Int) SetValue(val int) {
+	i.setValue((*intval)(&val))
+}
+
+type intval int
+
+func (i *intval) Set(s string) error {
+	v, err := strconv.ParseInt(s, 0, strconv.IntSize)
+	if err != nil {
+		return err
+	}
+	*i = intval(v)
+	return nil
+}
+
+func (i *intval) Get() any       { return int(*i) }
+func (i *intval) String() string { return strconv.FormatInt(int64(*i), 10) }
+
+//
+// Float64
+//
+
+type Float64 struct {
+	*Text
+}
+
+func NewFloat64(val float64) *Float64 {
+	return &Float64{Text: NewText((*f64val)(&val), "-+0123456789.eE")}
+}
+
+func (f *Float64) Value() float64 {
+	return float64(*(f.value().(*f64val)))
+}
+
+func (f *Float64) SetValue(val float64) {
+	f.setValue((*f64val)(&val))
+}
+
+type f64val float64
+
+func (f *f64val) Set(s string) error {
 	v, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return err
 	}
-	*i = Float64Value(v)
+	*f = f64val(v)
 	return nil
 }
 
-func (i *Float64Value) Get() any       { return uint(*i) }
-func (i *Float64Value) String() string { return strconv.FormatFloat(float64(*i), 'g', 3, 64) }
+func (f *f64val) Get() any       { return uint(*f) }
+func (f *f64val) String() string { return strconv.FormatFloat(float64(*f), 'g', 3, 64) }
+
+//
+// String
+//
+
+type String struct {
+	*Text
+}
+
+func NewString(val string) *String {
+	return &String{Text: NewText((*stringval)(&val), "")}
+}
+
+func NewStringWithFilter(val, filter string) *String {
+	return &String{Text: NewText((*stringval)(&val), filter)}
+}
+
+func (s *String) Value() string {
+	return string(*(s.value().(*stringval)))
+}
+
+func (s *String) SetValue(val string) {
+	s.setValue((*stringval)(&val))
+}
+
+type stringval string
+
+func (s *stringval) Set(str string) error {
+	*s = (stringval)(str)
+	return nil
+}
+
+func (s *stringval) Get() any       { return *s }
+func (s *stringval) String() string { return string(*s) }

@@ -9,7 +9,7 @@ import (
 	"gioui.org/widget/material"
 )
 
-// FocusBorderStyle implements a styling a focused widget.
+// FocusBorderStyle implements styling of a focused widget.
 type FocusBorderStyle struct {
 	Focused     bool
 	BorderWidth unit.Dp

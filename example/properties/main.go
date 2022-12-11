@@ -1,10 +1,11 @@
 package main
 
 import (
+	"image"
 	"image/color"
 	"log"
+	"math"
 	"os"
-	"time"
 
 	"gioui.org/app"
 	"gioui.org/font/gofont"
@@ -14,7 +15,6 @@ import (
 	"gioui.org/op"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"gioui.org/x/component"
 
 	"github.com/arl/gioexp/component/property"
 )
@@ -40,61 +40,37 @@ func main() {
 }
 
 type UI struct {
-	Theme *material.Theme
+	th    *material.Theme
+	plist *property.List
 
-	PropertyList *property.List
-	// TODO(arl) should we keep the properties? or just the pointer to the values?
-	prop1, prop2, prop3, prop4 *property.Property
+	prop5 *property.Uint
+	dd    *property.DropDown
 
 	btn widget.Clickable
-
-	// Modal can show widgets atop the rest of the ui.
-	Modal component.ModalState
 }
 
 var (
 	aliceBlue = color.NRGBA{R: 240, G: 248, B: 255, A: 255}
 )
 
-var p2 *uint
-
 func NewUI(theme *material.Theme) *UI {
-	prop1 := property.NewUInt(123456)
-	prop1.Name = "Property 1"
-	prop1.Editable = true
-
-	var p2val uint = 123
-	p2 = &p2val
-	prop2 := property.NewText((*property.UIntValue)(&p2val), "")
-	prop2.Name = "Property 1"
-	prop2.Editable = true
-
-	prop3 := property.NewFloat64(.2)
-	prop3.Name = "Float64"
-	prop3.Editable = true
-
-	prop4 := property.NewString("Hello Property")
-	prop4.Name = "String"
-	prop4.Editable = true
-
 	ui := &UI{
-		Theme: theme,
-		prop1: prop1,
-		prop2: prop2,
-		prop3: prop3,
-		prop4: prop4,
+		th: theme,
+		dd: property.NewDropDown([]string{"ciao", "bonjour", "hello", "hallo", "buongiorno", "buenos dias"}),
 	}
 
-	ui.Modal.VisibilityAnimation.Duration = time.Millisecond * 250
+	plist := property.NewList()
 
-	plist := property.NewList(&ui.Modal)
-	plist.MaxHeight = 300
-	plist.Add(prop1)
-	plist.Add(prop2)
-	plist.Add(prop3)
-	plist.Add(prop4)
-	ui.PropertyList = plist
+	plist.Add("int", property.NewInt(-10))
+	plist.Add("uint", property.NewUInt(123))
+	plist.Add("string", property.NewString("string property"))
+	plist.Add("float64", property.NewFloat64(math.Pi))
+	ui.prop5 = property.NewUInt(27)
+	plist.Add("uint editable", ui.prop5)
+	plist.Add("dropdown", ui.dd)
+	plist.Add("float64(2)", property.NewFloat64(23564.32e12))
 
+	ui.plist = plist
 	return ui
 }
 
@@ -121,43 +97,39 @@ func (ui *UI) Run(w *app.Window) error {
 
 func (ui *UI) Layout(gtx C) D {
 	if ui.btn.Clicked() {
-		ui.prop1.Editable = !ui.prop1.Editable
+		ui.prop5.Editable = !ui.prop5.Editable
+		ui.dd.Selected = 2
+		ui.prop5.SetValue(234)
 	}
 
-	return layout.Stack{}.Layout(gtx,
-		layout.Stacked(func(gtx C) D {
-			gtx.Constraints.Min = gtx.Constraints.Max
+	gtx.Constraints.Min = gtx.Constraints.Max
+	return layout.Flex{
+		Axis: layout.Horizontal,
+	}.Layout(gtx,
+		layout.Rigid(func(gtx C) D {
 			return layout.Flex{
-				Axis: layout.Horizontal,
+				Axis:    layout.Vertical,
+				Spacing: layout.SpaceEnd,
 			}.Layout(gtx,
 				layout.Rigid(func(gtx C) D {
-					return layout.Flex{
-						Axis:    layout.Vertical,
-						Spacing: layout.SpaceEnd,
-					}.Layout(gtx,
-						layout.Rigid(func(gtx C) D {
-							return ui.PropertyList.Layout(ui.Theme, gtx)
-						}),
-						layout.Rigid(func(gtx C) D {
-							return material.Button(ui.Theme, &ui.btn, "toggle editable").Layout(gtx)
-						}),
-					)
+					gtx.Constraints = layout.Exact(image.Pt(400, 400))
+					return ui.plist.Layout(ui.th, gtx)
+				}),
+				layout.Rigid(func(gtx C) D {
+					return material.Button(ui.th, &ui.btn, "toggle editable").Layout(gtx)
 				}),
 			)
-		}),
-		layout.Expanded(func(gtx C) D {
-			return ui.layoutModal(gtx)
 		}),
 	)
 }
 
-func (ui *UI) layoutModal(gtx C) D {
-	if ui.Modal.Clicked() {
-		ui.Modal.ToggleVisibility(gtx.Now)
-	}
-
-	return component.Modal(ui.Theme, &ui.Modal).Layout(gtx)
-}
+var (
+	red       = rgb(0xff0000)
+	green     = rgb(0x00ff00)
+	blue      = rgb(0x0000ff)
+	lightGrey = rgb(0xd3d3d3)
+	darkGrey  = rgb(0xa9a9a9)
+)
 
 func rgb(c uint32) color.NRGBA {
 	return argb(0xff000000 | c)
