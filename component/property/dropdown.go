@@ -1,6 +1,7 @@
 package property
 
 import (
+	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/text"
@@ -20,6 +21,7 @@ type DropDown struct {
 	area       component.ContextArea
 	menu       component.MenuState
 	clickables []*widget.Clickable
+	focused    bool
 }
 
 func (a *DropDown) Layout(th *material.Theme, pgtx, gtx C) D {
@@ -37,18 +39,27 @@ func (a *DropDown) Layout(th *material.Theme, pgtx, gtx C) D {
 	a.area.Activation = pointer.ButtonPrimary
 	a.area.AbsolutePosition = true
 
-	hasfocus := false
+	// Register an key op to get focus events.
+	key.InputOp{Tag: a, Hint: key.HintAny}.Add(gtx.Ops)
+	for _, e := range gtx.Events(a) {
+		switch e := e.(type) {
+		case key.FocusEvent:
+			a.focused = e.Focus
+		}
+	}
+
+	wgtx := gtx
 	return layout.Stack{}.Layout(pgtx,
 		layout.Stacked(func(gtx C) D {
+			gtx.Constraints = layout.Exact(wgtx.Constraints.Max)
 			inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
-
 			label := material.Label(th, th.TextSize, a.items[a.Selected])
 			label.MaxLines = 1
 			label.TextSize = th.TextSize
 			label.Alignment = text.Start
 			label.Color = th.Fg
 
-			return FocusBorder(th, hasfocus).Layout(gtx, func(gtx C) D {
+			return FocusBorder(th, a.focused).Layout(gtx, func(gtx C) D {
 				return inset.Layout(gtx, label.Layout)
 			})
 		}),
