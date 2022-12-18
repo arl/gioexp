@@ -3,6 +3,7 @@ package property
 import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
+	"gioui.org/text"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gioui.org/x/component"
@@ -36,22 +37,23 @@ func (a *DropDown) Layout(th *material.Theme, pgtx, gtx C) D {
 	a.area.Activation = pointer.ButtonPrimary
 	a.area.AbsolutePosition = true
 
-	wsize := gtx.Constraints.Max
-
+	hasfocus := false
 	return layout.Stack{}.Layout(pgtx,
 		layout.Stacked(func(gtx C) D {
-			return component.Surface(th).Layout(gtx, func(gtx C) D {
-				return FocusBorder(th, false).Layout(gtx, func(gtx C) D {
+			inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
 
-					inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
-					label := material.Label(th, th.TextSize, a.items[a.Selected])
-					dim := inset.Layout(gtx, label.Layout)
-					dim.Size.X = wsize.X - 6
-					return dim
-				})
+			label := material.Label(th, th.TextSize, a.items[a.Selected])
+			label.MaxLines = 1
+			label.TextSize = th.TextSize
+			label.Alignment = text.Start
+			label.Color = th.Fg
+
+			return FocusBorder(th, hasfocus).Layout(gtx, func(gtx C) D {
+				return inset.Layout(gtx, label.Layout)
 			})
 		}),
 		layout.Expanded(func(gtx C) D {
+			gtx.Constraints = layout.Exact(gtx.Constraints.Max)
 			return a.area.Layout(gtx, component.Menu(th, &a.menu).Layout)
 		}),
 	)
