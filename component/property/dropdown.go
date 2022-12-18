@@ -1,9 +1,11 @@
 package property
 
 import (
+	"gioui.org/gesture"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
+	"gioui.org/op/clip"
 	"gioui.org/text"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -21,10 +23,13 @@ type DropDown struct {
 	area       component.ContextArea
 	menu       component.MenuState
 	clickables []*widget.Clickable
-	focused    bool
+
+	focused bool
+	click   gesture.Click
 }
 
 func (a *DropDown) Layout(th *material.Theme, pgtx, gtx C) D {
+	// Handle menu selection.
 	a.menu.Options = a.menu.Options[:0]
 	for len(a.clickables) <= len(a.items) {
 		a.clickables = append(a.clickables, &widget.Clickable{})
@@ -39,14 +44,27 @@ func (a *DropDown) Layout(th *material.Theme, pgtx, gtx C) D {
 	a.area.Activation = pointer.ButtonPrimary
 	a.area.AbsolutePosition = true
 
-	// Register an key op to get focus events.
-	key.InputOp{Tag: a, Hint: key.HintAny}.Add(gtx.Ops)
+	// Handle focus "manually". When the dropdown is closed we draw a label,
+	// which can't receive focus. By registering a key.InputOp we can then receive
+	// focus events (and draw the focus border). We also want to grab the focus when
+	// the dropdown is opened: we do this with a.click.
 	for _, e := range gtx.Events(a) {
 		switch e := e.(type) {
 		case key.FocusEvent:
 			a.focused = e.Focus
 		}
 	}
+	a.click.Events(gtx)
+	if a.click.Pressed() {
+		// Request focus
+		key.FocusOp{Tag: a}.Add(gtx.Ops)
+	}
+
+	// Clip events to the widget area only.
+	clipOp := clip.Rect{Max: gtx.Constraints.Max}.Push(gtx.Ops)
+	key.InputOp{Tag: a, Hint: key.HintAny}.Add(gtx.Ops)
+	a.click.Add(gtx.Ops)
+	clipOp.Pop()
 
 	wgtx := gtx
 	return layout.Stack{}.Layout(pgtx,
