@@ -1,16 +1,23 @@
 package property
 
 import (
+	"image"
+
+	"gioui.org/f32"
 	"gioui.org/gesture"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
+	"gioui.org/op/paint"
 	"gioui.org/text"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gioui.org/x/component"
 )
+
+var darkGrey = rgb(0xa9a9a9)
 
 func NewDropDown(items []string) *DropDown {
 	return &DropDown{items: items}
@@ -76,6 +83,28 @@ func (a *DropDown) Layout(th *material.Theme, pgtx, gtx C) D {
 			label.TextSize = th.TextSize
 			label.Alignment = text.Start
 			label.Color = th.Fg
+
+			// Draw a triangle to discriminate a drop down widgets from text props.
+			//      w
+			//  _________  _
+			//  \       /  |
+			//   \  o  /   | h
+			//    \   /    |
+			//     \ /     |
+			// (o is the offset from which we begin drawing).
+			const w, h = 13, 7
+			off := image.Pt(gtx.Constraints.Max.X-w, gtx.Constraints.Max.Y/2-h)
+			stack := op.Offset(off).Push(gtx.Ops)
+			anchor := clip.Path{}
+			anchor.Begin(gtx.Ops)
+			anchor.Move(f32.Pt(-w/2, +h/2))
+			anchor.Line(f32.Pt(w, 0))
+			anchor.Line(f32.Pt(-w/2, h))
+			anchor.Line(f32.Pt(-w/2, -h))
+			anchor.Close()
+			anchorArea := clip.Outline{Path: anchor.End()}.Op()
+			paint.FillShape(gtx.Ops, darkGrey, anchorArea)
+			stack.Pop()
 
 			return FocusBorder(th, a.focused).Layout(gtx, func(gtx C) D {
 				return inset.Layout(gtx, label.Layout)
