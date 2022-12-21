@@ -77,6 +77,8 @@ func (a *DropDown) Layout(th *material.Theme, pgtx, gtx C) D {
 	return layout.Stack{}.Layout(pgtx,
 		layout.Stacked(func(gtx C) D {
 			gtx.Constraints = layout.Exact(wgtx.Constraints.Max)
+			defer clip.Rect{Max: gtx.Constraints.Max}.Push(gtx.Ops).Pop()
+
 			inset := layout.Inset{Top: 1, Right: 4, Bottom: 1, Left: 4}
 			label := material.Label(th, th.TextSize, a.items[a.Selected])
 			label.MaxLines = 1
