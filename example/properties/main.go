@@ -1,7 +1,6 @@
 package main
 
 import (
-	"image"
 	"image/color"
 	"log"
 	"math"
@@ -56,7 +55,7 @@ var (
 func NewUI(theme *material.Theme) *UI {
 	ui := &UI{
 		th: theme,
-		dd: property.NewDropDown([]string{"ciao", "bonjour", "hello", "hallo", "buongiorno", "buenos dias"}),
+		dd: property.NewDropDown([]string{"ciao", "bonjour", "hello", "hallo", "buongiorno", "buenos dias", "ola", "bom dia"}),
 	}
 
 	plist := property.NewList()
@@ -112,7 +111,7 @@ func (ui *UI) Layout(gtx C) D {
 				Spacing: layout.SpaceEnd,
 			}.Layout(gtx,
 				layout.Rigid(func(gtx C) D {
-					gtx.Constraints = layout.Exact(image.Pt(400, 400))
+					gtx.Constraints.Max.X = 400
 					return ui.plist.Layout(ui.th, gtx)
 				}),
 				layout.Rigid(func(gtx C) D {

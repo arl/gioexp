@@ -79,17 +79,14 @@ func (plist *List) visibleHeight(gtx C) int {
 }
 
 func (plist *List) Layout(th *material.Theme, gtx C) D {
-	size := image.Point{X: gtx.Constraints.Max.X, Y: gtx.Constraints.Max.Y}
-	gtx.Constraints = layout.Exact(size)
-
 	proportion := (plist.ratio + 1) / 2
 	whandle := gtx.Dp(plist.HandleBarWidth)
-	lsize := int(proportion*float32(size.X)) - whandle
+	lsize := int(proportion*float32(gtx.Constraints.Max.X)) - whandle
 	roff := lsize + whandle
 
-	barHeight := gtx.Dp(plist.HandleBarHeight)
-	vh := plist.visibleHeight(gtx)
-	barRect := image.Rect(lsize, (vh-barHeight)/2, roff, (vh+barHeight)/2)
+	htotal := plist.visibleHeight(gtx)
+	hhandle := gtx.Dp(plist.HandleBarHeight)
+	barrect := image.Rect(lsize, (htotal-hhandle)/2, roff, (htotal+hhandle)/2)
 
 	dim := widget.Border{
 		Color:        th.Fg,
@@ -98,8 +95,10 @@ func (plist *List) Layout(th *material.Theme, gtx C) D {
 	}.Layout(gtx, func(gtx C) D {
 		return layout.Stack{}.Layout(gtx,
 			layout.Stacked(func(gtx C) D {
-				gtx.Constraints.Min = gtx.Constraints.Max
+				// Copy the context passed to property widgets, we don't want
+				// its size constrained since it's used as modal pane.
 				pgtx := gtx
+				gtx.Constraints = layout.Exact(image.Pt(gtx.Constraints.Max.X, htotal))
 				return plist.list.Layout(gtx, len(plist.widgets), func(gtx C, i int) D {
 					gtx.Constraints.Min.Y = gtx.Dp(plist.PropertyHeight)
 					gtx.Constraints.Max.Y = gtx.Dp(plist.PropertyHeight)
@@ -111,10 +110,10 @@ func (plist *List) Layout(th *material.Theme, gtx C) D {
 				xdiv := lsize + whandle/2
 				paint.FillShape(gtx.Ops, th.ContrastBg, clip.Rect{
 					Min: image.Pt(xdiv, 0),
-					Max: image.Pt(xdiv+1, vh),
+					Max: image.Pt(xdiv+1, htotal),
 				}.Op())
 				// Draw handlebar
-				paint.FillShape(gtx.Ops, th.ContrastBg, clip.Rect(barRect).Op())
+				paint.FillShape(gtx.Ops, th.ContrastBg, clip.Rect(barrect).Op())
 				return D{}
 			}),
 		)
@@ -158,7 +157,7 @@ func (plist *List) Layout(th *material.Theme, gtx C) D {
 		}
 
 		// Register for receving input in the handlebar rect.
-		defer clip.Rect(barRect).Push(gtx.Ops).Pop()
+		defer clip.Rect(barrect).Push(gtx.Ops).Pop()
 		pointer.CursorColResize.Add(gtx.Ops)
 		pointer.InputOp{
 			Tag:   plist,
@@ -189,9 +188,6 @@ func clamp[T constraints.Ordered](mn, val, mx T) T {
 
 // layoutProperty lays out the property at index i from the list.
 func (plist *List) layoutProperty(idx int, th *material.Theme, pgtx, gtx C) D {
-	size := gtx.Constraints.Max
-	gtx.Constraints = layout.Exact(size)
-
 	proportion := (plist.ratio + 1) / 2
 	whandle := gtx.Dp(plist.HandleBarWidth)
 	lsize := int(proportion*float32(gtx.Constraints.Max.X) - float32(whandle))
@@ -218,8 +214,8 @@ func (plist *List) layoutProperty(idx int, th *material.Theme, pgtx, gtx C) D {
 
 	// Draw bottom border.
 	paint.FillShape(gtx.Ops, th.Fg, clip.Rect{
-		Min: image.Pt(0, size.Y-1),
-		Max: size,
+		Min: image.Pt(0, gtx.Constraints.Max.Y-1),
+		Max: gtx.Constraints.Max,
 	}.Op())
 
 	return layout.Dimensions{Size: gtx.Constraints.Max}
