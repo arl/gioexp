@@ -81,10 +81,11 @@ func (t *Text) Layout(th *material.Theme, _, gtx C) D {
 			// validation error? maybe animate a red flash. or set a red
 			// background that would quickly fade into the normal background
 			// color
-
-			// Revert the property text to the previous valid value.
-			t.setValue(t.val)
 		}
+
+		// Force parsing. This either sets previous valida value or formats
+		// currently entered value.
+		t.setValue(t.val)
 	}
 
 	// Draw value as an editor or a label depending on whether the property is
@@ -142,7 +143,6 @@ func (i *uintval) Set(s string) error {
 	return nil
 }
 
-func (i *uintval) Get() any       { return uint(*i) }
 func (i *uintval) String() string { return strconv.FormatUint(uint64(*i), 10) }
 
 //
@@ -176,7 +176,6 @@ func (i *intval) Set(s string) error {
 	return nil
 }
 
-func (i *intval) Get() any       { return int(*i) }
 func (i *intval) String() string { return strconv.FormatInt(int64(*i), 10) }
 
 //
@@ -187,31 +186,51 @@ type Float64 struct {
 	*Text
 }
 
+const (
+	defaultFloatFmt  = 'f'
+	defaultFloatPrec = 3
+)
+
 func NewFloat64(val float64) *Float64 {
-	return &Float64{Text: NewText((*f64val)(&val), "-+0123456789.eE")}
+	f := f64val{val: val, fmt: defaultFloatFmt, prec: defaultFloatPrec}
+	return &Float64{Text: NewText(&f, "-+0123456789.eE")}
+}
+
+// SetFormat sets the format to use when converting the floating point value to
+// string. fmt and prec as defined per strconv.FormatFloat(). By default, fmt is
+// 'f' and prec is 3.
+func (f *Float64) SetFormat(fmt byte, prec int) {
+	f64 := f.value().(*f64val)
+	f64.fmt = fmt
+	f64.prec = prec
 }
 
 func (f *Float64) Value() float64 {
-	return float64(*(f.value().(*f64val)))
+	return (*(f.value().(*f64val))).val
 }
 
 func (f *Float64) SetValue(val float64) {
-	f.setValue((*f64val)(&val))
+	f64 := f.value().(*f64val)
+	f64.val = val
+	f.setValue(f64)
 }
 
-type f64val float64
+type f64val struct {
+	val  float64
+	fmt  byte
+	prec int
+}
 
 func (f *f64val) Set(s string) error {
 	v, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return err
 	}
-	*f = f64val(v)
+	f.val = v
 	return nil
 }
 
-func (f *f64val) Get() any       { return uint(*f) }
-func (f *f64val) String() string { return strconv.FormatFloat(float64(*f), 'g', 3, 64) }
+func (f *f64val) String() string { return strconv.FormatFloat(f.val, f.fmt, f.prec, 64) }
 
 //
 // String
@@ -244,5 +263,4 @@ func (s *stringval) Set(str string) error {
 	return nil
 }
 
-func (s *stringval) Get() any       { return *s }
 func (s *stringval) String() string { return string(*s) }
