@@ -142,7 +142,6 @@ func (i *uintval) Set(s string) error {
 	return nil
 }
 
-func (i *uintval) Get() any       { return uint(*i) }
 func (i *uintval) String() string { return strconv.FormatUint(uint64(*i), 10) }
 
 //
@@ -176,7 +175,6 @@ func (i *intval) Set(s string) error {
 	return nil
 }
 
-func (i *intval) Get() any       { return int(*i) }
 func (i *intval) String() string { return strconv.FormatInt(int64(*i), 10) }
 
 //
@@ -210,7 +208,6 @@ func (f *f64val) Set(s string) error {
 	return nil
 }
 
-func (f *f64val) Get() any       { return uint(*f) }
 func (f *f64val) String() string { return strconv.FormatFloat(float64(*f), 'g', 3, 64) }
 
 //
@@ -244,5 +241,4 @@ func (s *stringval) Set(str string) error {
 	return nil
 }
 
-func (s *stringval) Get() any       { return *s }
 func (s *stringval) String() string { return string(*s) }
