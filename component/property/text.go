@@ -81,10 +81,11 @@ func (t *Text) Layout(th *material.Theme, _, gtx C) D {
 			// validation error? maybe animate a red flash. or set a red
 			// background that would quickly fade into the normal background
 			// color
-
-			// Revert the property text to the previous valid value.
-			t.setValue(t.val)
 		}
+
+		// Force parsing. This either sets previous valida value or formats
+		// currently entered value.
+		t.setValue(t.val)
 	}
 
 	// Draw value as an editor or a label depending on whether the property is
