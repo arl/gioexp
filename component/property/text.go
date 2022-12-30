@@ -185,30 +185,51 @@ type Float64 struct {
 	*Text
 }
 
+const (
+	defaultFloatFmt  = 'f'
+	defaultFloatPrec = 3
+)
+
 func NewFloat64(val float64) *Float64 {
-	return &Float64{Text: NewText((*f64val)(&val), "-+0123456789.eE")}
+	f := f64val{val: val, fmt: defaultFloatFmt, prec: defaultFloatPrec}
+	return &Float64{Text: NewText(&f, "-+0123456789.eE")}
+}
+
+// SetFormat sets the format to use when converting the floating point value to
+// string. fmt and prec as defined per strconv.FormatFloat(). By default, fmt is
+// 'f' and prec is 3.
+func (f *Float64) SetFormat(fmt byte, prec int) {
+	f64 := f.value().(*f64val)
+	f64.fmt = fmt
+	f64.prec = prec
 }
 
 func (f *Float64) Value() float64 {
-	return float64(*(f.value().(*f64val)))
+	return (*(f.value().(*f64val))).val
 }
 
 func (f *Float64) SetValue(val float64) {
-	f.setValue((*f64val)(&val))
+	f64 := f.value().(*f64val)
+	f64.val = val
+	f.setValue(f64)
 }
 
-type f64val float64
+type f64val struct {
+	val  float64
+	fmt  byte
+	prec int
+}
 
 func (f *f64val) Set(s string) error {
 	v, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return err
 	}
-	*f = f64val(v)
+	f.val = v
 	return nil
 }
 
-func (f *f64val) String() string { return strconv.FormatFloat(float64(*f), 'g', 3, 64) }
+func (f *f64val) String() string { return strconv.FormatFloat(f.val, f.fmt, f.prec, 64) }
 
 //
 // String
